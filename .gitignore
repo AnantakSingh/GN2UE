@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs / scratch
+*.log
+ue_importer/last_run*.log
+ue_importer/build.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# Office lock/temp files
+~$*
+
+# The live Unreal PROJECT is a separate directory and is NOT part of this repo
+# (it's regenerated from the plugin zip via tools/sync_ue_plugin.py). If you
+# ever nest a UE project inside, these are the folders to never commit:
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+*.VC.db
+*.uasset.tmp
+
+# Keep: source (.py, .cpp/.h, .md), build scripts, atlas, schema, the .blend,
+# and the shipped deliverable zips. Everything above is generated or transient.

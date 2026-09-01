@@ -1,0 +1,1178 @@
+{
+ "format": "gnue-descriptor",
+ "version": "2.0",
+ "family": "graph",
+ "source": {
+  "blender_version": "5.2.0 LTS",
+  "node_group": "RopeBridge_V1",
+  "file": "C:\\Projects\\GNtoUEresearch\\BlenderGeometryNodesBasic\\SimpleGeoNodes.blend"
+ },
+ "units": {
+  "length": "m",
+  "rotation": "rad",
+  "up": "+Z",
+  "handedness": "right"
+ },
+ "conventions": {
+  "curve_tangent_axis": "+Z",
+  "note": "Blender aligns instance +Z to curve tangent; UE Spline Sampler aligns +X \u2014 importer permutes axes."
+ },
+ "parameters": [
+  {
+   "name": "Start",
+   "type": "VECTOR",
+   "default": [
+    -5.0,
+    0.0,
+    1.399999976158142
+   ]
+  },
+  {
+   "name": "End",
+   "type": "VECTOR",
+   "default": [
+    5.0,
+    1.5,
+    1.7000000476837158
+   ]
+  },
+  {
+   "name": "Sag",
+   "type": "FLOAT",
+   "default": 0.8999999761581421,
+   "min": 0.0,
+   "max": 5.0
+  },
+  {
+   "name": "Plank Spacing",
+   "type": "FLOAT",
+   "default": 0.44999998807907104,
+   "min": 0.10000000149011612,
+   "max": 2.0
+  },
+  {
+   "name": "Plank Size",
+   "type": "VECTOR",
+   "default": [
+    1.100000023841858,
+    0.054999999701976776,
+    0.2800000011920929
+   ]
+  },
+  {
+   "name": "Plank Tilt",
+   "type": "FLOAT",
+   "default": 0.25,
+   "min": 0.0,
+   "max": 1.0
+  },
+  {
+   "name": "Bridge Width",
+   "type": "FLOAT",
+   "default": 1.149999976158142,
+   "min": 0.30000001192092896,
+   "max": 4.0
+  },
+  {
+   "name": "Rope Height",
+   "type": "FLOAT",
+   "default": 0.8500000238418579,
+   "min": 0.10000000149011612,
+   "max": 3.0
+  },
+  {
+   "name": "Rope Thickness",
+   "type": "FLOAT",
+   "default": 0.04500000178813934,
+   "min": 0.009999999776482582,
+   "max": 0.30000001192092896
+  },
+  {
+   "name": "Post Size",
+   "type": "VECTOR",
+   "default": [
+    0.1599999964237213,
+    0.1599999964237213,
+    1.2999999523162842
+   ]
+  },
+  {
+   "name": "Lanterns",
+   "type": "BOOL",
+   "default": true
+  },
+  {
+   "name": "Show Vegetation",
+   "type": "BOOL",
+   "default": true
+  },
+  {
+   "name": "Grass Density",
+   "type": "FLOAT",
+   "default": 8.0,
+   "min": 0.0,
+   "max": 200.0
+  },
+  {
+   "name": "Rock Density",
+   "type": "FLOAT",
+   "default": 1.2000000476837158,
+   "min": 0.0,
+   "max": 50.0
+  },
+  {
+   "name": "Grass Size",
+   "type": "FLOAT",
+   "default": 0.2800000011920929,
+   "min": 0.009999999776482582,
+   "max": 2.0
+  },
+  {
+   "name": "Seed",
+   "type": "INT",
+   "default": 0,
+   "min": -2147483648,
+   "max": 2147483647
+  }
+ ],
+ "assets": [
+  {
+   "id": "unit_cube_center",
+   "kind": "unit_cube",
+   "origin": "center",
+   "file": "meshes/SM_GNue_UnitCubeCenter.fbx"
+  },
+  {
+   "id": "unit_cube_bottom",
+   "kind": "unit_cube",
+   "origin": "bottom",
+   "file": "meshes/SM_GNue_UnitCubeBottom.fbx"
+  }
+ ],
+ "root": "geometry_join1",
+ "blocks": [
+  {
+   "id": "geometry_input0",
+   "type": "geometry.input"
+  },
+  {
+   "id": "scatter_on_surface0",
+   "type": "scatter.on_surface",
+   "surface": "geometry_input0",
+   "density": {
+    "param": "Rock Density"
+   },
+   "seed": {
+    "op": "math.add",
+    "args": [
+     {
+      "param": "Seed"
+     },
+     {
+      "const": 29.0
+     }
+    ]
+   },
+   "selection": {
+    "op": "bool.and",
+    "args": [
+     {
+      "op": "cmp.greater_than",
+      "args": [
+       {
+        "op": "vec.z",
+        "args": [
+         {
+          "attr": "normal"
+         }
+        ]
+       },
+       {
+        "const": 0.8500000238418579
+       }
+      ]
+     },
+     {
+      "op": "cmp.greater_than",
+      "args": [
+       {
+        "op": "vec.z",
+        "args": [
+         {
+          "attr": "position"
+         }
+        ]
+       },
+       {
+        "const": -0.20000000298023224
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "attribute_store0",
+   "type": "attribute.store",
+   "geometry": "scatter_on_surface0",
+   "name": "rs",
+   "domain": "POINT",
+   "data_type": "FLOAT",
+   "value": {
+    "random": {
+     "type": "FLOAT",
+     "min": {
+      "const": 0.4000000059604645
+     },
+     "max": {
+      "const": 1.7999999523162842
+     },
+     "seed": {
+      "param": "Seed"
+     }
+    }
+   }
+  },
+  {
+   "id": "instance_on_points0",
+   "type": "instance.on_points",
+   "points": "attribute_store0",
+   "instance": {
+    "asset": "unit_cube_center",
+    "size": {
+     "const": [
+      0.3499999940395355,
+      0.30000001192092896,
+      0.2199999988079071
+     ]
+    }
+   }
+  },
+  {
+   "id": "instance_rotate0",
+   "type": "instance.rotate",
+   "instances": "instance_on_points0",
+   "rotation": {
+    "op": "euler_to_rotation",
+    "args": [
+     {
+      "random": {
+       "type": "FLOAT_VECTOR",
+       "min": {
+        "const": [
+         -0.30000001192092896,
+         -0.30000001192092896,
+         0.0
+        ]
+       },
+       "max": {
+        "const": [
+         0.30000001192092896,
+         0.30000001192092896,
+         6.283199787139893
+        ]
+       },
+       "seed": {
+        "param": "Seed"
+       }
+      }
+     }
+    ]
+   },
+   "local": true
+  },
+  {
+   "id": "instance_scale0",
+   "type": "instance.scale",
+   "instances": "instance_rotate0",
+   "scale": {
+    "op": "vec3",
+    "args": [
+     {
+      "attr": "named:rs"
+     },
+     {
+      "attr": "named:rs"
+     },
+     {
+      "attr": "named:rs"
+     }
+    ]
+   }
+  },
+  {
+   "id": "scatter_on_surface1",
+   "type": "scatter.on_surface",
+   "surface": "geometry_input0",
+   "density": {
+    "param": "Grass Density"
+   },
+   "seed": {
+    "op": "math.add",
+    "args": [
+     {
+      "param": "Seed"
+     },
+     {
+      "const": 11.0
+     }
+    ]
+   },
+   "selection": {
+    "op": "bool.and",
+    "args": [
+     {
+      "op": "cmp.greater_than",
+      "args": [
+       {
+        "op": "vec.z",
+        "args": [
+         {
+          "attr": "normal"
+         }
+        ]
+       },
+       {
+        "const": 0.8500000238418579
+       }
+      ]
+     },
+     {
+      "op": "cmp.greater_than",
+      "args": [
+       {
+        "op": "vec.z",
+        "args": [
+         {
+          "attr": "position"
+         }
+        ]
+       },
+       {
+        "const": -0.20000000298023224
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "instance_on_points1",
+   "type": "instance.on_points",
+   "points": "scatter_on_surface1",
+   "instance": {
+    "asset": "unit_cube_bottom",
+    "size": {
+     "op": "vec3",
+     "args": [
+      {
+       "const": 0.04500000178813934
+      },
+      {
+       "const": 0.04500000178813934
+      },
+      {
+       "param": "Grass Size"
+      }
+     ]
+    }
+   },
+   "rotation": {
+    "op": "align_rotation",
+    "axis": "Z",
+    "args": [
+     {
+      "const": 1.0
+     },
+     {
+      "attr": "normal"
+     }
+    ]
+   }
+  },
+  {
+   "id": "instance_rotate1",
+   "type": "instance.rotate",
+   "instances": "instance_on_points1",
+   "rotation": {
+    "op": "euler_to_rotation",
+    "args": [
+     {
+      "op": "vec3",
+      "args": [
+       {
+        "const": 0.0
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "random": {
+         "type": "FLOAT",
+         "min": {
+          "const": 0.0
+         },
+         "max": {
+          "const": 6.283199787139893
+         },
+         "seed": {
+          "param": "Seed"
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "local": true
+  },
+  {
+   "id": "instance_scale1",
+   "type": "instance.scale",
+   "instances": "instance_rotate1",
+   "scale": {
+    "op": "vec3",
+    "args": [
+     {
+      "op": "map_range",
+      "args": [
+       {
+        "random": {
+         "type": "FLOAT",
+         "min": {
+          "const": 0.0
+         },
+         "max": {
+          "const": 1.0
+         },
+         "seed": {
+          "param": "Seed"
+         },
+         "id": {
+          "attr": "id"
+         }
+        }
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "const": 1.0
+       },
+       {
+        "const": 0.6000000238418579
+       },
+       {
+        "const": 1.399999976158142
+       }
+      ]
+     },
+     {
+      "op": "map_range",
+      "args": [
+       {
+        "random": {
+         "type": "FLOAT",
+         "min": {
+          "const": 0.0
+         },
+         "max": {
+          "const": 1.0
+         },
+         "seed": {
+          "param": "Seed"
+         },
+         "id": {
+          "attr": "id"
+         }
+        }
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "const": 1.0
+       },
+       {
+        "const": 0.6000000238418579
+       },
+       {
+        "const": 1.399999976158142
+       }
+      ]
+     },
+     {
+      "op": "map_range",
+      "args": [
+       {
+        "random": {
+         "type": "FLOAT",
+         "min": {
+          "const": 0.0
+         },
+         "max": {
+          "const": 1.0
+         },
+         "seed": {
+          "param": "Seed"
+         },
+         "id": {
+          "attr": "id"
+         }
+        }
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "const": 1.0
+       },
+       {
+        "const": 0.6000000238418579
+       },
+       {
+        "const": 1.399999976158142
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "attribute_store1",
+   "type": "attribute.store",
+   "geometry": "instance_scale1",
+   "name": "tint",
+   "domain": "INSTANCE",
+   "data_type": "FLOAT",
+   "value": {
+    "op": "mix",
+    "dtype": "FLOAT",
+    "args": [
+     {
+      "random": {
+       "type": "FLOAT",
+       "min": {
+        "const": 0.0
+       },
+       "max": {
+        "const": 1.0
+       },
+       "seed": {
+        "param": "Seed"
+       },
+       "id": {
+        "attr": "id"
+       }
+      }
+     },
+     {
+      "const": 0.25
+     },
+     {
+      "const": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "geometry_join0",
+   "type": "geometry.join",
+   "inputs": [
+    "instance_scale0",
+    "attribute_store1"
+   ]
+  },
+  {
+   "id": "geometry_switch0",
+   "type": "geometry.switch",
+   "switch": {
+    "param": "Show Vegetation"
+   },
+   "false_branch": null,
+   "true_branch": "geometry_join0"
+  },
+  {
+   "id": "curve_line0",
+   "type": "curve.line",
+   "start": {
+    "param": "Start"
+   },
+   "end": {
+    "param": "End"
+   }
+  },
+  {
+   "id": "curve_resample0",
+   "type": "curve.resample",
+   "curve": "curve_line0",
+   "mode": "count",
+   "count": {
+    "const": 32
+   },
+   "length": {
+    "const": 0.10000000149011612
+   }
+  },
+  {
+   "id": "geometry_set_position0",
+   "type": "geometry.set_position",
+   "geometry": "curve_resample0",
+   "offset": {
+    "op": "vec3",
+    "args": [
+     {
+      "const": 0.0
+     },
+     {
+      "const": 0.0
+     },
+     {
+      "op": "math.multiply",
+      "args": [
+       {
+        "op": "math.sine",
+        "args": [
+         {
+          "op": "math.multiply",
+          "args": [
+           {
+            "attr": "spline_factor"
+           },
+           {
+            "const": 3.1415927410125732
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "op": "math.multiply",
+        "args": [
+         {
+          "op": "clamp",
+          "args": [
+           {
+            "param": "Sag"
+           },
+           {
+            "const": 0.0
+           },
+           {
+            "const": 5.0
+           }
+          ]
+         },
+         {
+          "const": -1.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "curve_set_type0",
+   "type": "curve.set_type",
+   "curve": "geometry_set_position0",
+   "spline_type": "catmull_rom"
+  },
+  {
+   "id": "curve_length0",
+   "type": "curve.length",
+   "curve": "curve_set_type0"
+  },
+  {
+   "id": "curve_resample1",
+   "type": "curve.resample",
+   "curve": "curve_set_type0",
+   "mode": "count",
+   "count": {
+    "op": "math.divide",
+    "args": [
+     {
+      "block_output": {
+       "block": "curve_length0",
+       "output": "length"
+      }
+     },
+     {
+      "param": "Plank Spacing"
+     }
+    ]
+   },
+   "length": {
+    "const": 0.10000000149011612
+   }
+  },
+  {
+   "id": "attribute_capture0",
+   "type": "attribute.capture",
+   "geometry": "curve_resample1",
+   "domain": "POINT",
+   "items": {
+    "Selection": {
+     "attr": "spline_factor"
+    }
+   }
+  },
+  {
+   "id": "curve_to_points0",
+   "type": "curve.to_points",
+   "curve": "attribute_capture0",
+   "mode": "evaluated",
+   "count": {
+    "const": 10
+   }
+  },
+  {
+   "id": "instance_on_points2",
+   "type": "instance.on_points",
+   "points": "curve_to_points0",
+   "instance": {
+    "asset": "unit_cube_center",
+    "size": {
+     "param": "Plank Size"
+    }
+   },
+   "rotation": {
+    "attr": "rotation"
+   }
+  },
+  {
+   "id": "instance_rotate2",
+   "type": "instance.rotate",
+   "instances": "instance_on_points2",
+   "rotation": {
+    "op": "euler_to_rotation",
+    "args": [
+     {
+      "op": "vec3",
+      "args": [
+       {
+        "const": 0.0
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "op": "math.multiply",
+        "args": [
+         {
+          "op": "map_range",
+          "args": [
+           {
+            "attr": "capture:t",
+            "capture_block": "attribute_capture0"
+           },
+           {
+            "const": 0.0
+           },
+           {
+            "const": 1.0
+           },
+           {
+            "const": -1.0
+           },
+           {
+            "const": 1.0
+           }
+          ]
+         },
+         {
+          "param": "Plank Tilt"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "local": true
+  },
+  {
+   "id": "instance_translate0",
+   "type": "instance.translate",
+   "instances": "instance_rotate2",
+   "translation": {
+    "random": {
+     "type": "FLOAT_VECTOR",
+     "min": {
+      "const": [
+       -0.014999999664723873,
+       -0.029999999329447746,
+       -0.012000000104308128
+      ]
+     },
+     "max": {
+      "const": [
+       0.014999999664723873,
+       0.029999999329447746,
+       0.012000000104308128
+      ]
+     },
+     "seed": {
+      "param": "Seed"
+     }
+    }
+   },
+   "local": true
+  },
+  {
+   "id": "instances_to_points0",
+   "type": "instances.to_points",
+   "instances": "instance_translate0"
+  },
+  {
+   "id": "geometry_separate0",
+   "type": "geometry.separate",
+   "geometry": "instances_to_points0",
+   "domain": "POINT",
+   "selection": {
+    "op": "bool.and",
+    "args": [
+     {
+      "op": "cmp.equal",
+      "args": [
+       {
+        "op": "math.floored_modulo",
+        "args": [
+         {
+          "attr": "index"
+         },
+         {
+          "const": 3.0
+         }
+        ]
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "const": 0.10000000149011612
+       }
+      ]
+     },
+     {
+      "param": "Lanterns"
+     }
+    ]
+   }
+  },
+  {
+   "id": "geometry_set_position1",
+   "type": "geometry.set_position",
+   "geometry": "geometry_separate0",
+   "offset": {
+    "const": [
+     0.0,
+     0.0,
+     -0.2199999988079071
+    ]
+   }
+  },
+  {
+   "id": "instance_on_points3",
+   "type": "instance.on_points",
+   "points": "geometry_set_position1",
+   "instance": {
+    "asset": "unit_cube_center",
+    "size": {
+     "const": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.1599999964237213
+     ]
+    }
+   }
+  },
+  {
+   "id": "curve_sample0",
+   "type": "curve.sample",
+   "curve": "curve_set_type0",
+   "factor": {
+    "const": 0.0
+   }
+  },
+  {
+   "id": "curve_sample1",
+   "type": "curve.sample",
+   "curve": "curve_set_type0",
+   "factor": {
+    "const": 1.0
+   }
+  },
+  {
+   "id": "point_create0",
+   "type": "point.create",
+   "count": {
+    "const": 2
+   },
+   "position": {
+    "op": "mix",
+    "dtype": "VECTOR",
+    "args": [
+     {
+      "attr": "index"
+     },
+     {
+      "block_output": {
+       "block": "curve_sample0",
+       "output": "position"
+      }
+     },
+     {
+      "block_output": {
+       "block": "curve_sample1",
+       "output": "position"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "points_duplicate0",
+   "type": "points.duplicate",
+   "geometry": "point_create0",
+   "domain": "POINT",
+   "amount": {
+    "const": 2
+   }
+  },
+  {
+   "id": "geometry_set_position2",
+   "type": "geometry.set_position",
+   "geometry": "points_duplicate0",
+   "offset": {
+    "op": "vec3",
+    "args": [
+     {
+      "const": 0.0
+     },
+     {
+      "op": "math.multiply",
+      "args": [
+       {
+        "op": "math.multiply_add",
+        "args": [
+         {
+          "attr": "duplicate_index"
+         },
+         {
+          "const": 2.0
+         },
+         {
+          "const": -1.0
+         }
+        ]
+       },
+       {
+        "op": "math.multiply",
+        "args": [
+         {
+          "param": "Bridge Width"
+         },
+         {
+          "const": 0.5
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "const": 0.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "instance_on_points4",
+   "type": "instance.on_points",
+   "points": "geometry_set_position2",
+   "instance": {
+    "asset": "unit_cube_bottom",
+    "size": {
+     "param": "Post Size"
+    }
+   }
+  },
+  {
+   "id": "points_duplicate1",
+   "type": "points.duplicate",
+   "geometry": "curve_to_points0",
+   "domain": "POINT",
+   "amount": {
+    "const": 2
+   }
+  },
+  {
+   "id": "geometry_set_position3",
+   "type": "geometry.set_position",
+   "geometry": "points_duplicate1",
+   "offset": {
+    "op": "vmath.add",
+    "args": [
+     {
+      "op": "vmath.scale",
+      "args": [
+       {
+        "op": "vmath.normalize",
+        "args": [
+         {
+          "op": "vmath.cross_product",
+          "args": [
+           {
+            "attr": "tangent"
+           },
+           {
+            "const": [
+             0.0,
+             0.0,
+             1.0
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "op": "math.multiply",
+        "args": [
+         {
+          "op": "math.multiply_add",
+          "args": [
+           {
+            "attr": "duplicate_index"
+           },
+           {
+            "const": 2.0
+           },
+           {
+            "const": -1.0
+           }
+          ]
+         },
+         {
+          "op": "math.multiply",
+          "args": [
+           {
+            "param": "Bridge Width"
+           },
+           {
+            "const": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "vec3",
+      "args": [
+       {
+        "const": 0.0
+       },
+       {
+        "const": 0.0
+       },
+       {
+        "param": "Rope Height"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "points_to_curves0",
+   "type": "points.to_curves",
+   "points": "geometry_set_position3",
+   "group_id": {
+    "attr": "duplicate_index"
+   }
+  },
+  {
+   "id": "curve_set_type1",
+   "type": "curve.set_type",
+   "curve": "points_to_curves0",
+   "spline_type": "catmull_rom"
+  },
+  {
+   "id": "curve_to_points1",
+   "type": "curve.to_points",
+   "curve": "curve_set_type1",
+   "mode": "count",
+   "count": {
+    "op": "math.multiply",
+    "args": [
+     {
+      "op": "math.divide",
+      "args": [
+       {
+        "block_output": {
+         "block": "curve_length0",
+         "output": "length"
+        }
+       },
+       {
+        "param": "Plank Spacing"
+       }
+      ]
+     },
+     {
+      "const": 3.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "instance_on_points5",
+   "type": "instance.on_points",
+   "points": "curve_to_points1",
+   "instance": {
+    "asset": "unit_cube_center",
+    "size": {
+     "op": "vec3",
+     "args": [
+      {
+       "param": "Rope Thickness"
+      },
+      {
+       "param": "Rope Thickness"
+      },
+      {
+       "op": "math.multiply",
+       "args": [
+        {
+         "param": "Plank Spacing"
+        },
+        {
+         "const": 0.41999998688697815
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "rotation": {
+    "attr": "rotation"
+   }
+  },
+  {
+   "id": "geometry_join1",
+   "type": "geometry.join",
+   "inputs": [
+    "geometry_input0",
+    "geometry_switch0",
+    "instance_on_points3",
+    "instance_on_points4",
+    "instance_on_points5",
+    "instance_translate0"
+   ]
+  }
+ ],
+ "warnings": []
+}

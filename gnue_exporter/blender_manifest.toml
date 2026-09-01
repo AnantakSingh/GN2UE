@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "gnue_exporter"
+version = "0.7.0"
+name = "GN to UE Exporter"
+tagline = "Export V1-core Geometry Nodes effects for Unreal Engine"
+maintainer = "GNtoUE research"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:MIT"]
+tags = ["Import-Export", "Node"]
+
+[permissions]
+files = "Write the descriptor and baked FBX meshes to the chosen export folder"

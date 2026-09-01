@@ -1,0 +1,2015 @@
+{
+  "format": "gnue-descriptor",
+  "version": "1.1",
+  "family": "static_scatter",
+  "source": {
+    "blender_version": "5.2.0 LTS",
+    "file": "C:\\Projects\\GNtoUEresearch\\BlenderGeometryNodesBasic\\SimpleGeoNodes.blend",
+    "node_group": "SpineTreeGN",
+    "exported_at": "2026-08-12T23:03:20Z"
+  },
+  "units": {
+    "length": "m",
+    "rotation": "rad",
+    "up": "+Z",
+    "handedness": "right"
+  },
+  "parameters": [
+    {
+      "name": "Seed",
+      "type": "int",
+      "default": 0
+    },
+    {
+      "name": "Spine Segments",
+      "type": "int",
+      "default": 12
+    },
+    {
+      "name": "Wander",
+      "type": "float",
+      "default": 0.5
+    },
+    {
+      "name": "Cube Count",
+      "type": "int",
+      "default": 10
+    },
+    {
+      "name": "Cube Thickness",
+      "type": "float",
+      "default": 0.22
+    },
+    {
+      "name": "Cube Length",
+      "type": "float",
+      "default": 0.85
+    },
+    {
+      "name": "Leaf Points",
+      "type": "int",
+      "default": 48
+    },
+    {
+      "name": "Leaf Probability",
+      "type": "float",
+      "default": 0.35,
+      "subtype": "factor"
+    },
+    {
+      "name": "Leaf Size",
+      "type": "float",
+      "default": 0.6
+    }
+  ],
+  "meshes": [
+    {
+      "id": "cube",
+      "file": "SM_SpineCube.fbx",
+      "source": "generated: MeshCube(1,1,1) + SubdivideMesh(level 2)",
+      "note": "unit cube; scaled per-instance by the cubes0 block"
+    },
+    {
+      "id": "leaf",
+      "file": "SM_TreeLeaf.fbx",
+      "source": "generated: MeshGrid(1 x 0.33) at X=0.9 + Cylinder(r=0.035, depth=0.55, 8 verts) along X",
+      "note": "authored at Leaf Size = 1; scale uniformly by the Leaf Size parameter (all leaf dimensions are linear in Leaf Size)"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "spine0",
+      "type": "curve.random_walk",
+      "points": {
+        "param": "Spine Segments"
+      },
+      "base_step": [
+        0.0,
+        0.0,
+        0.6
+      ],
+      "step_random": {
+        "min": [
+          -1.0,
+          -1.0,
+          -0.1
+        ],
+        "max": [
+          1.0,
+          1.0,
+          0.4
+        ],
+        "scale": {
+          "param": "Wander"
+        },
+        "seed": {
+          "param": "Seed"
+        },
+        "accumulate": true
+      },
+      "smooth": {
+        "type": "catmull_rom",
+        "samples": 128
+      }
+    },
+    {
+      "id": "cubes0",
+      "type": "scatter.on_curve",
+      "curve": "spine0",
+      "count": {
+        "param": "Cube Count"
+      },
+      "mesh": "cube",
+      "align": {
+        "axis": "z",
+        "to": "tangent"
+      },
+      "scale": {
+        "x": {
+          "param": "Cube Thickness"
+        },
+        "y": {
+          "param": "Cube Thickness"
+        },
+        "z": {
+          "expr": "max",
+          "of": [
+            {
+              "expr": "segment_overlap",
+              "curve_length_of": "spine0",
+              "count": {
+                "param": "Cube Count"
+              },
+              "overlap": 1.5,
+              "note": "1.5 * curve_length / (count - 1)"
+            },
+            {
+              "param": "Cube Length"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "leaves0",
+      "type": "scatter.on_curve",
+      "curve": "spine0",
+      "count": {
+        "param": "Leaf Points"
+      },
+      "mesh": "leaf",
+      "selection": {
+        "kind": "random_bool",
+        "probability": {
+          "param": "Leaf Probability"
+        },
+        "seed": {
+          "expr": "add",
+          "of": [
+            {
+              "param": "Seed"
+            },
+            1
+          ]
+        }
+      },
+      "rotation": {
+        "kind": "random_euler",
+        "replaces_alignment": true,
+        "yaw": {
+          "min": 0.0,
+          "max": 6.2832,
+          "seed": {
+            "expr": "add",
+            "of": [
+              {
+                "param": "Seed"
+              },
+              2
+            ]
+          }
+        },
+        "tilt": {
+          "min": [
+            -0.45,
+            -0.9,
+            0.0
+          ],
+          "max": [
+            0.45,
+            0.2,
+            0.0
+          ],
+          "seed": {
+            "expr": "add",
+            "of": [
+              {
+                "param": "Seed"
+              },
+              7
+            ]
+          }
+        },
+        "compose": "yaw_plus_tilt_euler_add"
+      },
+      "scale": {
+        "uniform": {
+          "param": "Leaf Size"
+        }
+      }
+    }
+  ],
+  "raw_graph": {
+    "nodes": [
+      {
+        "name": "Group Input",
+        "idname": "NodeGroupInput",
+        "loc": [
+          -1400,
+          0
+        ],
+        "inputs": []
+      },
+      {
+        "name": "Group Output",
+        "idname": "NodeGroupOutput",
+        "loc": [
+          1500,
+          0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "linked": true
+          },
+          {
+            "name": "",
+            "linked": false
+          }
+        ]
+      },
+      {
+        "name": "Mesh Line",
+        "idname": "GeometryNodeMeshLine",
+        "loc": [
+          -1100,
+          300
+        ],
+        "inputs": [
+          {
+            "name": "Count",
+            "linked": true
+          },
+          {
+            "name": "Resolution",
+            "linked": false,
+            "value": 1.0
+          },
+          {
+            "name": "Start Location",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Offset",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.6
+            ]
+          }
+        ],
+        "props": {
+          "mode": "OFFSET"
+        }
+      },
+      {
+        "name": "Random Value",
+        "idname": "FunctionNodeRandomValue",
+        "loc": [
+          -1100,
+          60
+        ],
+        "inputs": [
+          {
+            "name": "Min",
+            "linked": true
+          },
+          {
+            "name": "Max",
+            "linked": true
+          },
+          {
+            "name": "ID",
+            "linked": false,
+            "value": 0
+          },
+          {
+            "name": "Seed",
+            "linked": true
+          }
+        ],
+        "props": {
+          "data_type": "FLOAT_VECTOR"
+        }
+      },
+      {
+        "name": "Vector Math",
+        "idname": "ShaderNodeVectorMath",
+        "loc": [
+          -1250,
+          -80
+        ],
+        "inputs": [
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              -1.0,
+              -1.0,
+              -0.1
+            ]
+          },
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Scale",
+            "linked": true
+          }
+        ],
+        "props": {
+          "operation": "SCALE"
+        }
+      },
+      {
+        "name": "Vector Math.001",
+        "idname": "ShaderNodeVectorMath",
+        "loc": [
+          -1250,
+          -220
+        ],
+        "inputs": [
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              1.0,
+              1.0,
+              0.4
+            ]
+          },
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Scale",
+            "linked": true
+          }
+        ],
+        "props": {
+          "operation": "SCALE"
+        }
+      },
+      {
+        "name": "Accumulate Field",
+        "idname": "GeometryNodeAccumulateField",
+        "loc": [
+          -850,
+          60
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Group ID",
+            "linked": false,
+            "value": 0
+          }
+        ],
+        "props": {
+          "data_type": "FLOAT_VECTOR",
+          "domain": "POINT"
+        }
+      },
+      {
+        "name": "Set Position",
+        "idname": "GeometryNodeSetPosition",
+        "loc": [
+          -650,
+          300
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          },
+          {
+            "name": "Position",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Offset",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Mesh to Curve",
+        "idname": "GeometryNodeMeshToCurve",
+        "loc": [
+          -450,
+          300
+        ],
+        "inputs": [
+          {
+            "name": "Mesh",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          }
+        ],
+        "props": {
+          "mode": "EDGES"
+        }
+      },
+      {
+        "name": "Set Spline Type",
+        "idname": "GeometryNodeCurveSplineType",
+        "loc": [
+          -280,
+          300
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          }
+        ],
+        "props": {
+          "spline_type": "CATMULL_ROM"
+        }
+      },
+      {
+        "name": "Resample Curve",
+        "idname": "GeometryNodeResampleCurve",
+        "loc": [
+          -100,
+          300
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          },
+          {
+            "name": "Mode",
+            "linked": false,
+            "value": "Count"
+          },
+          {
+            "name": "Count",
+            "linked": false,
+            "value": 128
+          },
+          {
+            "name": "Length",
+            "linked": false,
+            "value": 0.1
+          }
+        ]
+      },
+      {
+        "name": "Resample Curve.001",
+        "idname": "GeometryNodeResampleCurve",
+        "loc": [
+          150,
+          500
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          },
+          {
+            "name": "Mode",
+            "linked": false,
+            "value": "Count"
+          },
+          {
+            "name": "Count",
+            "linked": true
+          },
+          {
+            "name": "Length",
+            "linked": false,
+            "value": 0.1
+          }
+        ]
+      },
+      {
+        "name": "Curve to Points",
+        "idname": "GeometryNodeCurveToPoints",
+        "loc": [
+          350,
+          500
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          },
+          {
+            "name": "Count",
+            "linked": false,
+            "value": 10
+          },
+          {
+            "name": "Length",
+            "linked": false,
+            "value": 0.1
+          }
+        ],
+        "props": {
+          "mode": "EVALUATED"
+        }
+      },
+      {
+        "name": "Cube",
+        "idname": "GeometryNodeMeshCube",
+        "loc": [
+          150,
+          250
+        ],
+        "inputs": [
+          {
+            "name": "Size",
+            "linked": false,
+            "value": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Vertices X",
+            "linked": false,
+            "value": 2
+          },
+          {
+            "name": "Vertices Y",
+            "linked": false,
+            "value": 2
+          },
+          {
+            "name": "Vertices Z",
+            "linked": false,
+            "value": 2
+          }
+        ]
+      },
+      {
+        "name": "Subdivide Mesh",
+        "idname": "GeometryNodeSubdivideMesh",
+        "loc": [
+          350,
+          250
+        ],
+        "inputs": [
+          {
+            "name": "Mesh",
+            "linked": true
+          },
+          {
+            "name": "Level",
+            "linked": false,
+            "value": 2
+          }
+        ]
+      },
+      {
+        "name": "Combine XYZ",
+        "idname": "ShaderNodeCombineXYZ",
+        "loc": [
+          350,
+          100
+        ],
+        "inputs": [
+          {
+            "name": "X",
+            "linked": true
+          },
+          {
+            "name": "Y",
+            "linked": true
+          },
+          {
+            "name": "Z",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Instance on Points",
+        "idname": "GeometryNodeInstanceOnPoints",
+        "loc": [
+          620,
+          400
+        ],
+        "inputs": [
+          {
+            "name": "Points",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          },
+          {
+            "name": "Instance",
+            "linked": true
+          },
+          {
+            "name": "Pick Instance",
+            "linked": false,
+            "value": false
+          },
+          {
+            "name": "Instance Index",
+            "linked": false,
+            "value": 0
+          },
+          {
+            "name": "Rotation",
+            "linked": true
+          },
+          {
+            "name": "Scale",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Resample Curve.002",
+        "idname": "GeometryNodeResampleCurve",
+        "loc": [
+          150,
+          -200
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": false,
+            "value": true
+          },
+          {
+            "name": "Mode",
+            "linked": false,
+            "value": "Count"
+          },
+          {
+            "name": "Count",
+            "linked": true
+          },
+          {
+            "name": "Length",
+            "linked": false,
+            "value": 0.1
+          }
+        ]
+      },
+      {
+        "name": "Curve to Points.001",
+        "idname": "GeometryNodeCurveToPoints",
+        "loc": [
+          350,
+          -200
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          },
+          {
+            "name": "Count",
+            "linked": false,
+            "value": 10
+          },
+          {
+            "name": "Length",
+            "linked": false,
+            "value": 0.1
+          }
+        ],
+        "props": {
+          "mode": "EVALUATED"
+        }
+      },
+      {
+        "name": "Math",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          150,
+          -420
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 1.0
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "ADD"
+        }
+      },
+      {
+        "name": "Math.001",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          150,
+          -580
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 2.0
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "ADD"
+        }
+      },
+      {
+        "name": "Random Value.001",
+        "idname": "FunctionNodeRandomValue",
+        "loc": [
+          380,
+          -420
+        ],
+        "inputs": [
+          {
+            "name": "Probability",
+            "linked": true
+          },
+          {
+            "name": "ID",
+            "linked": false,
+            "value": 0
+          },
+          {
+            "name": "Seed",
+            "linked": true
+          }
+        ],
+        "props": {
+          "data_type": "BOOLEAN"
+        }
+      },
+      {
+        "name": "Random Value.002",
+        "idname": "FunctionNodeRandomValue",
+        "loc": [
+          380,
+          -620
+        ],
+        "inputs": [
+          {
+            "name": "Min",
+            "linked": false,
+            "value": 0.0
+          },
+          {
+            "name": "Max",
+            "linked": false,
+            "value": 6.2832
+          },
+          {
+            "name": "ID",
+            "linked": false,
+            "value": 0
+          },
+          {
+            "name": "Seed",
+            "linked": true
+          }
+        ],
+        "props": {
+          "data_type": "FLOAT"
+        }
+      },
+      {
+        "name": "Combine XYZ.001",
+        "idname": "ShaderNodeCombineXYZ",
+        "loc": [
+          580,
+          -620
+        ],
+        "inputs": [
+          {
+            "name": "X",
+            "linked": false,
+            "value": 0.0
+          },
+          {
+            "name": "Y",
+            "linked": false,
+            "value": 0.0
+          },
+          {
+            "name": "Z",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Math.002",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          150,
+          -750
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.33
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MULTIPLY"
+        }
+      },
+      {
+        "name": "Grid",
+        "idname": "GeometryNodeMeshGrid",
+        "loc": [
+          380,
+          -800
+        ],
+        "inputs": [
+          {
+            "name": "Size X",
+            "linked": true
+          },
+          {
+            "name": "Size Y",
+            "linked": true
+          },
+          {
+            "name": "Vertices X",
+            "linked": false,
+            "value": 2
+          },
+          {
+            "name": "Vertices Y",
+            "linked": false,
+            "value": 2
+          }
+        ]
+      },
+      {
+        "name": "Instance on Points.001",
+        "idname": "GeometryNodeInstanceOnPoints",
+        "loc": [
+          620,
+          -300
+        ],
+        "inputs": [
+          {
+            "name": "Points",
+            "linked": true
+          },
+          {
+            "name": "Selection",
+            "linked": true
+          },
+          {
+            "name": "Instance",
+            "linked": true
+          },
+          {
+            "name": "Pick Instance",
+            "linked": false,
+            "value": false
+          },
+          {
+            "name": "Instance Index",
+            "linked": false,
+            "value": 0
+          },
+          {
+            "name": "Rotation",
+            "linked": true
+          },
+          {
+            "name": "Scale",
+            "linked": false,
+            "value": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Math.003",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          620,
+          -550
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.9
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MULTIPLY"
+        }
+      },
+      {
+        "name": "Combine XYZ.002",
+        "idname": "ShaderNodeCombineXYZ",
+        "loc": [
+          800,
+          -550
+        ],
+        "inputs": [
+          {
+            "name": "X",
+            "linked": true
+          },
+          {
+            "name": "Y",
+            "linked": false,
+            "value": 0.0
+          },
+          {
+            "name": "Z",
+            "linked": false,
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "name": "Join Geometry",
+        "idname": "GeometryNodeJoinGeometry",
+        "loc": [
+          1200,
+          100
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Spine Length",
+        "idname": "GeometryNodeCurveLength",
+        "loc": [
+          -400,
+          -600
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Count Minus 1",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -400,
+          -750
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 1.0
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "SUBTRACT"
+        }
+      },
+      {
+        "name": "Segment Spacing",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -220,
+          -650
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "DIVIDE"
+        }
+      },
+      {
+        "name": "Overlap Length",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -60,
+          -650
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 1.5
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MULTIPLY"
+        }
+      },
+      {
+        "name": "Segment Length",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          100,
+          -650
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MAXIMUM"
+        }
+      },
+      {
+        "name": "Seed Plus 7",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -400,
+          600
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 7.0
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "ADD"
+        }
+      },
+      {
+        "name": "Leaf Tilt",
+        "idname": "FunctionNodeRandomValue",
+        "loc": [
+          -220,
+          600
+        ],
+        "inputs": [
+          {
+            "name": "Min",
+            "linked": false,
+            "value": [
+              -0.45,
+              -0.9,
+              0.0
+            ]
+          },
+          {
+            "name": "Max",
+            "linked": false,
+            "value": [
+              0.45,
+              0.2,
+              0.0
+            ]
+          },
+          {
+            "name": "ID",
+            "linked": false,
+            "value": 0
+          },
+          {
+            "name": "Seed",
+            "linked": true
+          }
+        ],
+        "props": {
+          "data_type": "FLOAT_VECTOR"
+        }
+      },
+      {
+        "name": "Leaf Rotation",
+        "idname": "ShaderNodeVectorMath",
+        "loc": [
+          -40,
+          600
+        ],
+        "inputs": [
+          {
+            "name": "Vector",
+            "linked": true
+          },
+          {
+            "name": "Vector",
+            "linked": true
+          },
+          {
+            "name": "Vector",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Scale",
+            "linked": false,
+            "value": 1.0
+          }
+        ],
+        "props": {
+          "operation": "ADD"
+        }
+      },
+      {
+        "name": "Petiole Radius",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -600,
+          300
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.035
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MULTIPLY"
+        }
+      },
+      {
+        "name": "Petiole Length",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -600,
+          160
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.55
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MULTIPLY"
+        }
+      },
+      {
+        "name": "Petiole Half",
+        "idname": "ShaderNodeMath",
+        "loc": [
+          -440,
+          160
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "linked": true
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          },
+          {
+            "name": "Value",
+            "linked": false,
+            "value": 0.5
+          }
+        ],
+        "props": {
+          "operation": "MULTIPLY"
+        }
+      },
+      {
+        "name": "Petiole",
+        "idname": "GeometryNodeMeshCylinder",
+        "loc": [
+          -440,
+          380
+        ],
+        "inputs": [
+          {
+            "name": "Vertices",
+            "linked": false,
+            "value": 8
+          },
+          {
+            "name": "Side Segments",
+            "linked": false,
+            "value": 1
+          },
+          {
+            "name": "Fill Segments",
+            "linked": false,
+            "value": 1
+          },
+          {
+            "name": "Radius",
+            "linked": true
+          },
+          {
+            "name": "Depth",
+            "linked": true
+          }
+        ]
+      },
+      {
+        "name": "Petiole Offset",
+        "idname": "ShaderNodeCombineXYZ",
+        "loc": [
+          -280,
+          200
+        ],
+        "inputs": [
+          {
+            "name": "X",
+            "linked": true
+          },
+          {
+            "name": "Y",
+            "linked": false,
+            "value": 0.0
+          },
+          {
+            "name": "Z",
+            "linked": false,
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "name": "Petiole Transform",
+        "idname": "GeometryNodeTransform",
+        "loc": [
+          -260,
+          380
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "linked": true
+          },
+          {
+            "name": "Mode",
+            "linked": false,
+            "value": "Components"
+          },
+          {
+            "name": "Translation",
+            "linked": true
+          },
+          {
+            "name": "Rotation",
+            "linked": false,
+            "value": [
+              0.0,
+              1.570796,
+              0.0
+            ]
+          },
+          {
+            "name": "Scale",
+            "linked": false,
+            "value": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Transform",
+            "linked": false
+          }
+        ]
+      },
+      {
+        "name": "Leaf Transform",
+        "idname": "GeometryNodeTransform",
+        "loc": [
+          -260,
+          500
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "linked": true
+          },
+          {
+            "name": "Mode",
+            "linked": false,
+            "value": "Components"
+          },
+          {
+            "name": "Translation",
+            "linked": true
+          },
+          {
+            "name": "Rotation",
+            "linked": false,
+            "value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Scale",
+            "linked": false,
+            "value": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Transform",
+            "linked": false
+          }
+        ]
+      },
+      {
+        "name": "Leaf + Petiole",
+        "idname": "GeometryNodeJoinGeometry",
+        "loc": [
+          -100,
+          450
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "linked": true
+          }
+        ]
+      }
+    ],
+    "links": [
+      [
+        "Group Input",
+        "Spine Segments",
+        "Mesh Line",
+        "Count"
+      ],
+      [
+        "Group Input",
+        "Seed",
+        "Random Value",
+        "Seed"
+      ],
+      [
+        "Group Input",
+        "Wander",
+        "Vector Math",
+        "Scale"
+      ],
+      [
+        "Vector Math",
+        "Vector",
+        "Random Value",
+        "Min"
+      ],
+      [
+        "Group Input",
+        "Wander",
+        "Vector Math.001",
+        "Scale"
+      ],
+      [
+        "Vector Math.001",
+        "Vector",
+        "Random Value",
+        "Max"
+      ],
+      [
+        "Random Value",
+        "Value",
+        "Accumulate Field",
+        "Value"
+      ],
+      [
+        "Mesh Line",
+        "Mesh",
+        "Set Position",
+        "Geometry"
+      ],
+      [
+        "Accumulate Field",
+        "Leading",
+        "Set Position",
+        "Offset"
+      ],
+      [
+        "Set Position",
+        "Geometry",
+        "Mesh to Curve",
+        "Mesh"
+      ],
+      [
+        "Mesh to Curve",
+        "Curve",
+        "Set Spline Type",
+        "Curve"
+      ],
+      [
+        "Set Spline Type",
+        "Curve",
+        "Resample Curve",
+        "Curve"
+      ],
+      [
+        "Resample Curve",
+        "Curve",
+        "Resample Curve.001",
+        "Curve"
+      ],
+      [
+        "Group Input",
+        "Cube Count",
+        "Resample Curve.001",
+        "Count"
+      ],
+      [
+        "Resample Curve.001",
+        "Curve",
+        "Curve to Points",
+        "Curve"
+      ],
+      [
+        "Cube",
+        "Mesh",
+        "Subdivide Mesh",
+        "Mesh"
+      ],
+      [
+        "Group Input",
+        "Cube Thickness",
+        "Combine XYZ",
+        "X"
+      ],
+      [
+        "Group Input",
+        "Cube Thickness",
+        "Combine XYZ",
+        "Y"
+      ],
+      [
+        "Curve to Points",
+        "Points",
+        "Instance on Points",
+        "Points"
+      ],
+      [
+        "Subdivide Mesh",
+        "Mesh",
+        "Instance on Points",
+        "Instance"
+      ],
+      [
+        "Curve to Points",
+        "Rotation",
+        "Instance on Points",
+        "Rotation"
+      ],
+      [
+        "Combine XYZ",
+        "Vector",
+        "Instance on Points",
+        "Scale"
+      ],
+      [
+        "Resample Curve",
+        "Curve",
+        "Resample Curve.002",
+        "Curve"
+      ],
+      [
+        "Group Input",
+        "Leaf Points",
+        "Resample Curve.002",
+        "Count"
+      ],
+      [
+        "Resample Curve.002",
+        "Curve",
+        "Curve to Points.001",
+        "Curve"
+      ],
+      [
+        "Group Input",
+        "Seed",
+        "Math",
+        "Value"
+      ],
+      [
+        "Group Input",
+        "Seed",
+        "Math.001",
+        "Value"
+      ],
+      [
+        "Group Input",
+        "Leaf Probability",
+        "Random Value.001",
+        "Probability"
+      ],
+      [
+        "Math",
+        "Value",
+        "Random Value.001",
+        "Seed"
+      ],
+      [
+        "Math.001",
+        "Value",
+        "Random Value.002",
+        "Seed"
+      ],
+      [
+        "Random Value.002",
+        "Value",
+        "Combine XYZ.001",
+        "Z"
+      ],
+      [
+        "Group Input",
+        "Leaf Size",
+        "Math.002",
+        "Value"
+      ],
+      [
+        "Group Input",
+        "Leaf Size",
+        "Grid",
+        "Size X"
+      ],
+      [
+        "Math.002",
+        "Value",
+        "Grid",
+        "Size Y"
+      ],
+      [
+        "Curve to Points.001",
+        "Points",
+        "Instance on Points.001",
+        "Points"
+      ],
+      [
+        "Random Value.001",
+        "Value",
+        "Instance on Points.001",
+        "Selection"
+      ],
+      [
+        "Group Input",
+        "Leaf Size",
+        "Math.003",
+        "Value"
+      ],
+      [
+        "Math.003",
+        "Value",
+        "Combine XYZ.002",
+        "X"
+      ],
+      [
+        "Instance on Points",
+        "Instances",
+        "Join Geometry",
+        "Geometry"
+      ],
+      [
+        "Join Geometry",
+        "Geometry",
+        "Group Output",
+        "Geometry"
+      ],
+      [
+        "Resample Curve.001",
+        "Curve",
+        "Spine Length",
+        "Curve"
+      ],
+      [
+        "Group Input",
+        "Cube Count",
+        "Count Minus 1",
+        "Value"
+      ],
+      [
+        "Spine Length",
+        "Length",
+        "Segment Spacing",
+        "Value"
+      ],
+      [
+        "Count Minus 1",
+        "Value",
+        "Segment Spacing",
+        "Value"
+      ],
+      [
+        "Segment Spacing",
+        "Value",
+        "Overlap Length",
+        "Value"
+      ],
+      [
+        "Overlap Length",
+        "Value",
+        "Segment Length",
+        "Value"
+      ],
+      [
+        "Group Input",
+        "Cube Length",
+        "Segment Length",
+        "Value"
+      ],
+      [
+        "Segment Length",
+        "Value",
+        "Combine XYZ",
+        "Z"
+      ],
+      [
+        "Group Input",
+        "Seed",
+        "Seed Plus 7",
+        "Value"
+      ],
+      [
+        "Seed Plus 7",
+        "Value",
+        "Leaf Tilt",
+        "Seed"
+      ],
+      [
+        "Combine XYZ.001",
+        "Vector",
+        "Leaf Rotation",
+        "Vector"
+      ],
+      [
+        "Leaf Tilt",
+        "Value",
+        "Leaf Rotation",
+        "Vector"
+      ],
+      [
+        "Leaf Rotation",
+        "Vector",
+        "Instance on Points.001",
+        "Rotation"
+      ],
+      [
+        "Group Input",
+        "Leaf Size",
+        "Petiole Radius",
+        "Value"
+      ],
+      [
+        "Group Input",
+        "Leaf Size",
+        "Petiole Length",
+        "Value"
+      ],
+      [
+        "Petiole Length",
+        "Value",
+        "Petiole Half",
+        "Value"
+      ],
+      [
+        "Petiole Radius",
+        "Value",
+        "Petiole",
+        "Radius"
+      ],
+      [
+        "Petiole Length",
+        "Value",
+        "Petiole",
+        "Depth"
+      ],
+      [
+        "Petiole Half",
+        "Value",
+        "Petiole Offset",
+        "X"
+      ],
+      [
+        "Petiole",
+        "Mesh",
+        "Petiole Transform",
+        "Geometry"
+      ],
+      [
+        "Petiole Offset",
+        "Vector",
+        "Petiole Transform",
+        "Translation"
+      ],
+      [
+        "Grid",
+        "Mesh",
+        "Leaf Transform",
+        "Geometry"
+      ],
+      [
+        "Combine XYZ.002",
+        "Vector",
+        "Leaf Transform",
+        "Translation"
+      ],
+      [
+        "Petiole Transform",
+        "Geometry",
+        "Leaf + Petiole",
+        "Geometry"
+      ],
+      [
+        "Leaf Transform",
+        "Geometry",
+        "Leaf + Petiole",
+        "Geometry"
+      ],
+      [
+        "Leaf + Petiole",
+        "Geometry",
+        "Instance on Points.001",
+        "Instance"
+      ],
+      [
+        "Instance on Points.001",
+        "Instances",
+        "Join Geometry",
+        "Geometry"
+      ]
+    ],
+    "interface": [
+      {
+        "name": "Geometry",
+        "dir": "OUTPUT",
+        "type": "NodeSocketGeometry"
+      },
+      {
+        "name": "Geometry",
+        "dir": "INPUT",
+        "type": "NodeSocketGeometry"
+      },
+      {
+        "name": "Seed",
+        "dir": "INPUT",
+        "type": "NodeSocketInt",
+        "default": 0
+      },
+      {
+        "name": "Spine Segments",
+        "dir": "INPUT",
+        "type": "NodeSocketInt",
+        "default": 12
+      },
+      {
+        "name": "Wander",
+        "dir": "INPUT",
+        "type": "NodeSocketFloat",
+        "default": 0.5
+      },
+      {
+        "name": "Cube Count",
+        "dir": "INPUT",
+        "type": "NodeSocketInt",
+        "default": 10
+      },
+      {
+        "name": "Cube Thickness",
+        "dir": "INPUT",
+        "type": "NodeSocketFloat",
+        "default": 0.22
+      },
+      {
+        "name": "Cube Length",
+        "dir": "INPUT",
+        "type": "NodeSocketFloat",
+        "default": 0.85
+      },
+      {
+        "name": "Leaf Points",
+        "dir": "INPUT",
+        "type": "NodeSocketInt",
+        "default": 48
+      },
+      {
+        "name": "Leaf Probability",
+        "dir": "INPUT",
+        "type": "NodeSocketFloat",
+        "default": 0.35
+      },
+      {
+        "name": "Leaf Size",
+        "dir": "INPUT",
+        "type": "NodeSocketFloat",
+        "default": 0.6
+      }
+    ]
+  }
+}

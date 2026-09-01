@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gnbridge.local/schemas/gnue-descriptor-1.0.json",
+  "title": "GN→UE Effect Descriptor",
+  "description": "Semantic export of a Blender Geometry Nodes curve-travel effect for import into Unreal Engine via the GNBridge plugin. V1 scope: curve-travelling instanced meshes with staggered timing and fading deformation.",
+  "type": "object",
+  "required": ["format", "version", "source", "units", "parameters", "objects", "blocks"],
+  "properties": {
+    "format": { "const": "gnue-descriptor" },
+    "version": { "type": "string", "pattern": "^1\\.0$" },
+    "source": {
+      "type": "object",
+      "required": ["blender_version", "node_group"],
+      "properties": {
+        "blender_version": { "type": "string" },
+        "file": { "type": "string" },
+        "node_group": { "type": "string" },
+        "exported_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "units": {
+      "type": "object",
+      "description": "Declares the units values are expressed in. V1 exporters always write Blender-native units; the importer owns conversion.",
+      "required": ["length", "rotation", "up", "handedness"],
+      "properties": {
+        "length": { "const": "m" },
+        "rotation": { "const": "rad" },
+        "up": { "const": "+Z" },
+        "handedness": { "const": "right" }
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/parameter" }
+    },
+    "objects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/objectRef" }
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "raw_graph": {
+      "type": "object",
+      "description": "Diagnostic dump of the full node graph. Never consumed by the V1 importer.",
+      "properties": {
+        "nodes": { "type": "array" },
+        "links": { "type": "array" }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+    },
+    "vec3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "parameter": {
+      "type": "object",
+      "required": ["name", "type", "default"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "enum": ["float", "int", "vector", "bool"] },
+        "default": {},
+        "subtype": { "enum": ["euler", "translation", "factor"] },
+        "role": {
+          "enum": ["animation_driver"],
+          "description": "animation_driver: the 0→1 progress input; importer wires the self-contained EmitterAge driver and exposes it for override."
+        }
+      }
+    },
+    "objectRef": {
+      "type": "object",
+      "required": ["id", "name", "role"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "description": "Blender object name; importer resolves against /Game/ content or spawns a TODO_ placeholder." },
+        "role": { "enum": ["curve_endpoint", "instance_mesh"] }
+      }
+    },
+    "valueSource": {
+      "description": "Where a block input gets its value: a literal, a user parameter, another block's output, or an object binding.",
+      "oneOf": [
+        { "type": "number" },
+        { "$ref": "#/$defs/vec3" },
+        {
+          "type": "object",
+          "required": ["param"],
+          "properties": {
+            "param": { "type": "string" },
+            "space": { "enum": ["local", "world"] }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["block", "output"],
+          "properties": {
+            "block": { "$ref": "#/$defs/identifier" },
+            "output": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["bind", "object"],
+          "properties": {
+            "bind": { "enum": ["object_location"] },
+            "object": { "$ref": "#/$defs/identifier" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["expr", "of"],
+          "properties": {
+            "expr": { "enum": ["midpoint"] },
+            "of": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 },
+            "offset": { "$ref": "#/$defs/vec3" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "block": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": {
+          "enum": [
+            "curve.quadratic_bezier",
+            "curve.bezier_segment",
+            "curve.line",
+            "instances.on_points",
+            "timing.index_stagger",
+            "placement.sample_curve",
+            "deform.axis_parabolic_bend"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "curve.quadratic_bezier" } } },
+          "then": {
+            "required": ["start", "middle", "end"],
+            "properties": {
+              "start": { "$ref": "#/$defs/valueSource" },
+              "middle": { "$ref": "#/$defs/valueSource" },
+              "end": { "$ref": "#/$defs/valueSource" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "curve.line" } } },
+          "then": {
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "$ref": "#/$defs/valueSource" },
+              "end": { "$ref": "#/$defs/valueSource" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "instances.on_points" } } },
+          "then": {
+            "required": ["count", "mesh"],
+            "properties": {
+              "count": { "type": "integer", "minimum": 1, "maximum": 10000 },
+              "mesh": {
+                "type": "object",
+                "required": ["object"],
+                "properties": { "object": { "$ref": "#/$defs/identifier" } }
+              },
+              "index_capture": { "type": "boolean", "default": true }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "timing.index_stagger" } } },
+          "then": {
+            "required": ["instances", "progress", "spacing", "duration"],
+            "properties": {
+              "instances": { "$ref": "#/$defs/identifier" },
+              "progress": { "$ref": "#/$defs/valueSource" },
+              "spacing": { "$ref": "#/$defs/valueSource" },
+              "duration": { "$ref": "#/$defs/valueSource" },
+              "clamp": { "type": "boolean", "default": true },
+              "output": { "const": "factor" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "placement.sample_curve" } } },
+          "then": {
+            "required": ["curve", "instances", "factor", "align"],
+            "properties": {
+              "curve": { "$ref": "#/$defs/identifier" },
+              "instances": { "$ref": "#/$defs/identifier" },
+              "factor": { "$ref": "#/$defs/valueSource" },
+              "align": {
+                "type": "object",
+                "required": ["x", "z"],
+                "properties": {
+                  "x": { "enum": ["tangent"] },
+                  "z": { "enum": ["normal"] }
+                }
+              },
+              "base_rotation": { "$ref": "#/$defs/valueSource" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "deform.axis_parabolic_bend" } } },
+          "then": {
+            "required": ["instances", "axis", "strength"],
+            "properties": {
+              "instances": { "$ref": "#/$defs/identifier" },
+              "axis": { "$ref": "#/$defs/vec3" },
+              "displace": { "enum": ["+Z"], "default": "+Z" },
+              "strength": {
+                "type": "object",
+                "required": ["kind", "max", "fade_end", "driver"],
+                "properties": {
+                  "kind": { "const": "linear_fade" },
+                  "max": { "$ref": "#/$defs/valueSource" },
+                  "fade_end": { "$ref": "#/$defs/valueSource" },
+                  "driver": { "$ref": "#/$defs/valueSource" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

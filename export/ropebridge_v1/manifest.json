@@ -1,0 +1,12 @@
+{
+ "exporter": "gnue_exporter",
+ "descriptor": "effect.gnue.json",
+ "descriptor_version": "2.0",
+ "blender_version": "5.2.0 LTS",
+ "blend_file": "C:\\Projects\\GNtoUEresearch\\BlenderGeometryNodesBasic\\SimpleGeoNodes.blend",
+ "node_group": "RopeBridge_V1",
+ "assets": [
+  "meshes/SM_GNue_UnitCubeCenter.fbx",
+  "meshes/SM_GNue_UnitCubeBottom.fbx"
+ ]
+}

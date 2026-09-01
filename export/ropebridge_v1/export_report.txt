@@ -1,0 +1,31 @@
+GN->UE export report — node group 'RopeBridge_V1'
+Blender 5.2.0 LTS, descriptor v2.0 (family: graph)
+nodes: 115 -> blocks: 41, assets: 2, params: 16
+  block attribute.capture      x1
+  block attribute.store        x2
+  block curve.length           x1
+  block curve.line             x1
+  block curve.resample         x2
+  block curve.sample           x2
+  block curve.set_type         x2
+  block curve.to_points        x2
+  block geometry.input         x1
+  block geometry.join          x2
+  block geometry.separate      x1
+  block geometry.set_position  x4
+  block geometry.switch        x1
+  block instance.on_points     x6
+  block instance.rotate        x3
+  block instance.scale         x2
+  block instance.translate     x1
+  block instances.to_points    x1
+  block point.create           x1
+  block points.duplicate       x2
+  block points.to_curves       x1
+  block scatter.on_surface     x2
+
+Known approximations (by design, statistical equivalence):
+  - random values use UE's RNG (distributions match, placements differ)
+  - baked assets freeze parameter dependence at export-time values
+  - scatter samples YOUR UE level's ground (any collidable surface
+    under the PCG volume) — the Blender input mesh is not exported

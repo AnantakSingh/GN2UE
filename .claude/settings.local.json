@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "PowerShell($vars = @\\('ANTHROPIC_API_KEY','ANTHROPIC_BASE_URL','CLAUDE_CODE_OAUTH_TOKEN','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','DISABLE_TELEMETRY','DO_NOT_TRACK','CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC','DISABLE_GROWTHBOOK'\\); foreach \\($v in $vars\\) { $val = [Environment]::GetEnvironmentVariable\\($v\\); if \\($val\\) { \"$v = SET\" } else { \"$v = \\(not set\\)\" } }; \"---\"; $c = Get-Command claude -ErrorAction SilentlyContinue; if \\($c\\) { \"claude CLI: \" + $c.Source } else { \"claude CLI: NOT on PATH\" })",
+      "PowerShell(\"ANTHROPIC_BASE_URL = \" + [Environment]::GetEnvironmentVariable\\('ANTHROPIC_BASE_URL'\\); \"User scope: \" + [Environment]::GetEnvironmentVariable\\('ANTHROPIC_BASE_URL','User'\\); \"Machine scope: \" + [Environment]::GetEnvironmentVariable\\('ANTHROPIC_BASE_URL','Machine'\\); \"---\"; claude --version)",
+      "PowerShell($log = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Projects-GNtoUEresearch\\\\fa5a8492-2d3f-48ff-9345-906980c3b8f9\\\\scratchpad\\\\rc.log\"; if \\(Test-Path $log\\) { Remove-Item $log -Force }; Start-Process -FilePath \"C:\\\\Users\\\\User\\\\.local\\\\bin\\\\claude.exe\" -ArgumentList 'remote-control','--name','GNtoUE','--verbose' -WorkingDirectory \"C:\\\\Projects\\\\GNtoUEresearch\" -RedirectStandardOutput $log -RedirectStandardError \"$log.err\" -WindowStyle Hidden -PassThru | Select-Object Id,ProcessName,StartTime)",
+      "WebFetch(domain:dev.epicgames.com)",
+      "Bash(python -c \"import jsonschema; print\\(jsonschema.__version__\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"import jsonschema; print\\('ok', jsonschema.__version__\\)\")",
+      "Bash(python -m pip install jsonschema)",
+      "Bash(python -)"
+    ]
+  }
+}
