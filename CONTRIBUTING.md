@@ -62,7 +62,7 @@ open one issue per node and assign yourself). The waves come from
 [ROADMAP.md](ROADMAP.md).
 
 ### Wave 1 — primitives  ·  **assigned, in progress** (split in [ROADMAP.md](ROADMAP.md#wave-1--mesh--curve-primitives-12--69--in-progress-two-people))
-- **Person A — mesh (bake):** [ ] Cylinder · [ ] Cone · [ ] Ico Sphere · [ ] UV Sphere · [ ] Grid · [ ] Mesh Circle
+- **Person A — mesh (bake):** [x] Cylinder · [x] Cone · [x] Ico Sphere · [x] UV Sphere · [x] Grid · [x] Mesh Circle  ✅ **done (57→63), branch `person-a/wave1-mesh-primitives`**
 - **Person B — curve (kernel):** [ ] Curve Circle · [ ] Arc · [ ] Quadrilateral · [ ] Star · [ ] Spiral · [ ] Bezier Segment
 
 ### Wave 2 — math / logic / fields
