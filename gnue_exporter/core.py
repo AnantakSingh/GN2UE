@@ -65,6 +65,11 @@ V1X_WHITELIST = {
 # a clear message by the geo_* handlers below.
 BAKED_PRIMITIVES = {
     "GeometryNodeMeshCylinder",
+    "GeometryNodeMeshCone",
+    "GeometryNodeMeshIcoSphere",
+    "GeometryNodeMeshUVSphere",
+    "GeometryNodeMeshGrid",
+    "GeometryNodeMeshCircle",
 }
 
 

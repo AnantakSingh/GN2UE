@@ -2,8 +2,8 @@
 
 This is the exact set of Blender Geometry Nodes the exporter will translate to
 Unreal, taken from the whitelists in `gnue_exporter/core.py` (the single source
-of truth). **58 nodes**: 51 in the V1 core, a 6-node V1.x tier gated behind
-descriptor feature flags, plus a growing Wave 1 tier of mesh primitives
+of truth). **63 nodes**: 51 in the V1 core, a 6-node V1.x tier gated behind
+descriptor feature flags, plus a 6-node Wave 1 tier of mesh primitives
 (baked instance sources) — see the roadmap to 100+ in `ROADMAP.md`.
 
 **How translation works.** The bridge is a deterministic compiler, not an AI
@@ -134,6 +134,11 @@ message pointing you to Instance on Points.
 | Blender node | Menu | In UE |
 |---|---|---|
 | Cylinder | Mesh > Primitives | baked FBX instance source |
+| Cone | Mesh > Primitives | baked FBX instance source |
+| Ico Sphere | Mesh > Primitives | baked FBX instance source |
+| UV Sphere | Mesh > Primitives | baked FBX instance source |
+| Grid | Mesh > Primitives | baked FBX instance source |
+| Mesh Circle | Mesh > Primitives | baked FBX instance source (fill type NGON/Triangle Fan → a face; None → edges only) |
 
 ---
 

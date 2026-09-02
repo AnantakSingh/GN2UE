@@ -24,9 +24,18 @@ primitive is unblocked by whitelisting it and proven with an end-to-end
   real 11 KB FBX + `instance.on_points` block, no false warnings). Direct
   (non-instanced) geometry use is refused with a clear message.
 
+- **Cone, Ico Sphere, UV Sphere, Grid, Mesh Circle** (`GeometryNodeMeshCone`,
+  `…MeshIcoSphere`, `…MeshUVSphere`, `…MeshGrid`, `…MeshCircle`) — nodes
+  **59–63/100**. Same baked-instance-source mechanism as Cylinder; added to
+  `BAKED_PRIMITIVES`. Proven by `build_mesh_primitives.py`, the parameterized
+  Person A regression test (headless Blender, **6/6 PASS**, real FBX for each).
+  **Person A's Wave 1 mesh track is complete (57 → 63).**
+
 ### Infrastructure
 - Added this **CHANGELOG.md** as the milestone/backup ledger.
 - Branch `person-a/wave1-mesh-primitives` for the Person A track.
+- `build_mesh_primitives.py` — canonical parameterized regression test for the
+  Person A primitives.
 
 ---
 
