@@ -31,11 +31,36 @@ primitive is unblocked by whitelisting it and proven with an end-to-end
   Person A regression test (headless Blender, **6/6 PASS**, real FBX for each).
   **Person A's Wave 1 mesh track is complete (57 → 63).**
 
+### Fixed
+- **`MeshLine` now imports** — added the missing `k_point_line` kernel handler in
+  `import_gnue2.py`. `GeometryNodeMeshLine` emits a `point.line` block, but the
+  importer had no handler (only `point.create` for `GeometryNodePoints`), so any
+  effect using Mesh Line as its points source refused at import with
+  `no handler for point.line`. Surfaced by importing the primitive test effects
+  into UE. Handler places point `i` at `start + offset*i` (Offset mode).
+
+### Verified in Unreal (headless, single-process — no MCP)
+- **PrimZoo** (`build_primzoo.py`, all six primitives in one effect) imported into
+  UE 5.8: all 6 FBX → real `StaticMesh` assets, PCG graph `PCG_PrimZoo` built
+  (12 nodes, 6 instance groups), **GNUE2 IMPORT RESULT: PASS**, no errors.
+- **CylTestA** (Mesh Line path) re-imported after the `k_point_line` fix:
+  **PASS**, `counts=[6]` (6 cylinders along the line). Confirms both points
+  sources (`point.create`, `point.line`) round-trip.
+
+### Known / deferred
+- Baked primitives import **faceted** (FBX carries no smoothing groups) — matches
+  Blender's default flat GN primitives; smooth-shading export deferred by choice.
+- `GeometryNodeTransform` has no general geometry rule (only the instance-source
+  origin-shift case); move points with `Set Position` instead. Pre-existing.
+- The **deliverable plugin's** bundled importer copy still needs a re-sync
+  (`tools/sync_ue_plugin.py`) to carry the `k_point_line` fix before the next
+  packaged release.
+
 ### Infrastructure
 - Added this **CHANGELOG.md** as the milestone/backup ledger.
 - Branch `person-a/wave1-mesh-primitives` for the Person A track.
-- `build_mesh_primitives.py` — canonical parameterized regression test for the
-  Person A primitives.
+- `build_mesh_primitives.py` (export regression) and `build_primzoo.py`
+  (UE import verification, all six primitives) — the Person A test artifacts.
 
 ---
 

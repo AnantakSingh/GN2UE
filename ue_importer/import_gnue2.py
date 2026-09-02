@@ -471,6 +471,16 @@ class Kernel:
         P = [[float(c) for c in p] if isinstance(p, list) else [0, 0, 0] for p in vals]
         return {"P": P}
 
+    def k_point_line(self, b, inv):
+        # Mesh Line, Offset mode: point i sits at start + offset*i. (The exporter
+        # emits only start/offset, i.e. offset semantics; End-Points mode would
+        # arrive pre-resolved as start/offset.)
+        n = max(0, int(round(float(self.ex(b["count"])))))
+        start = [float(c) for c in self.ex(b["start"])]
+        offset = [float(c) for c in self.ex(b["offset"])]
+        P = [[start[c] + offset[c] * i for c in range(3)] for i in range(n)]
+        return {"P": P}
+
     def k_instances_to_points(self, b, inv):
         chain = b["instances"]
         blk = self.block(chain)
