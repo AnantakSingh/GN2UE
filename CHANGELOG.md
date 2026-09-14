@@ -24,6 +24,9 @@ Node count is the running total of supported Blender nodes (see
   `.uproject`; `-DryRun`), `make_deliverables.py` (`--dry-run`; refuses to package on
   version drift), `run_import.ps1` (`-DryRun`) take their paths from the resolver.
   `bl_info` version corrected 0.4.0 -> 0.7.0.
+- Lane B: the five in-engine scripts resolve their fixture from
+  `unreal.SystemLibrary.get_project_directory()` (`GNUE_TEST_FOLDER` overrides) and
+  skip with a `<TAG> RESULT: SKIP` line when it is absent, instead of crashing.
 
 ## Wave 1 primitives — merged to `main` in PR #1
 
