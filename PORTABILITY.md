@@ -196,12 +196,12 @@ it); after that, lanes A, B and C touch disjoint files and can go in parallel.
 All five use `unreal.SystemLibrary.get_project_directory()` per §2.3. No resolver
 dependency, so this lane can start immediately alongside Task 1.
 
-- [ ] **B1** `tools/test_cubefield_import.py:11`
-- [ ] **B2** `tools/test_domino_rotations.py:6`
-- [ ] **B3** `tools/test_params_headless.py:6`
-- [ ] **B4** `tools/test_walktrim_import.py:6`
-- [ ] **B5** `tools/refresh_cubefield.py:7`
-- [ ] **B6** Optional: factor the shared line into `tools/ue_testlib.py`.
+- [x] **B1** `tools/test_cubefield_import.py:11`
+- [x] **B2** `tools/test_domino_rotations.py:6`
+- [x] **B3** `tools/test_params_headless.py:6`
+- [x] **B4** `tools/test_walktrim_import.py:6`
+- [x] **B5** `tools/refresh_cubefield.py:7`
+- [x] **B6** Not done, by design: `tools/` is not importable inside the pythonscript commandlet (only the plugin's `Content/Python` is on `sys.path`), so the 8-line `fixture()` helper is inlined in each script. Each also honours `GNUE_TEST_FOLDER` and skips with a `<TAG> RESULT: SKIP` line when its fixture is absent.
 
 > These tests also depend on specific drop folders (`cubefield_fx`, `Domino`,
 > `ropebridge_v1`, `walktrim_test`) existing in *someone's* `GNueDrops`. Fixing
