@@ -16,8 +16,15 @@ Thumbs.db
 # Office lock/temp files
 ~$*
 
-# Generated per-node test exports (regenerable via build_<node>.py)
+# Generated per-node test exports (regenerable via build_*.py)
 export/*_test_a/
+export/primzoo/
+
+# Per-machine config for the dev loop (see PORTABILITY.md)
+gnue.config.json
+
+# Claude Code per-machine settings (permissions, local paths, session ids)
+.claude/settings.local.json
 
 # The live Unreal PROJECT is a separate directory and is NOT part of this repo
 # (it's regenerated from the plugin zip via tools/sync_ue_plugin.py). If you

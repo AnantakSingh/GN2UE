@@ -9,7 +9,19 @@ Node count is the running total of supported Blender nodes (see
 [deliverables/SUPPORTED_NODES.md](deliverables/SUPPORTED_NODES.md) and
 [ROADMAP.md](ROADMAP.md)).
 
-## [Unreleased] — Wave 1 primitives (branch `person-a/wave1-mesh-primitives`)
+## [Unreleased] — Portability (see PORTABILITY.md)
+
+### Added
+- `tools/gnue_paths.py` — one resolver for repo / UE project / engine / Blender /
+  version: explicit arg → `GNUE_*` env → `gnue.config.json` → auto-discovery →
+  actionable error. Engine discovery is keyed on the `.uproject`'s
+  `EngineAssociation`; project discovery requires the GNue plugin or `GNueDrops/`.
+- `gnue.config.example.json` (per-machine config template) and `LICENSE` (MIT).
+### Changed
+- `.claude/settings.local.json` untracked (per-machine); `gnue.config.json` and
+  `export/primzoo/` gitignored.
+
+## Wave 1 primitives — merged to `main` in PR #1
 
 Person A track: mesh primitives added as baked instance sources. The exporter's
 `bake_subgraph` and the importer's FBX asset loop are already generic, so each
