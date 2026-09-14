@@ -171,24 +171,24 @@ it); after that, lanes A, B and C touch disjoint files and can go in parallel.
 
 ### Lane A — build & packaging scripts
 
-- [ ] **A1** `tools/sync_ue_plugin.py:22` — replace the hardcoded default with
+- [x] **A1** `tools/sync_ue_plugin.py:22` — replace the hardcoded default with
       `gnue_paths.ue_project()`; keep `argv[1]` as the highest-priority override.
-- [ ] **A2** `tools/build_ue_plugin.ps1:10-11` — add `param([string]$Engine, [string]$Project)`
+- [x] **A2** `tools/build_ue_plugin.ps1:10-11` — add `param([string]$Engine, [string]$Project)`
       following [`run_import.ps1`](ue_importer/run_import.ps1)'s shape. When not passed,
       shell out to the resolver rather than duplicating discovery logic:
       `python -c "import tools.gnue_paths as p; print(p.engine_root())"`.
       **Also line 24:** `GNtoUEEditor` is a hardcoded build target — derive it from the
       `.uproject` name (`editor_target()`). This is the one that silently breaks for
       anyone whose UE project isn't literally called `GNtoUE`.
-- [ ] **A3** `tools/make_deliverables.py:15` — take the plugin dir from
+- [x] **A3** `tools/make_deliverables.py:15` — take the plugin dir from
       `gnue_paths.plugin_dir()`.
-- [ ] **A4** `tools/make_deliverables.py:16` — **kill the duplicated version string.**
+- [x] **A4** `tools/make_deliverables.py:16` — **kill the duplicated version string.**
       `0.7.0` currently lives in three places (`make_deliverables.py:16`,
       `sync_ue_plugin.py:140`, `blender_manifest.toml:4`) and a *fourth,
       already-stale* one: `gnue_exporter/__init__.py:9` still says `(0, 4, 0)`.
       Make `blender_manifest.toml` the single source and have the others read it.
       Fixes the drift and removes a step from the release checklist.
-- [ ] **A5** `ue_importer/run_import.ps1:13-14` — swap the hardcoded defaults for
+- [x] **A5** `ue_importer/run_import.ps1:13-14` — swap the hardcoded defaults for
       resolver lookups (parameter shape is already correct).
 
 ### Lane B — headless test scripts

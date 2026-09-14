@@ -20,6 +20,10 @@ Node count is the running total of supported Blender nodes (see
 ### Changed
 - `.claude/settings.local.json` untracked (per-machine); `gnue.config.json` and
   `export/primzoo/` gitignored.
+- Lane A: `sync_ue_plugin.py`, `build_ue_plugin.ps1` (UBT target derived from the
+  `.uproject`; `-DryRun`), `make_deliverables.py` (`--dry-run`; refuses to package on
+  version drift), `run_import.ps1` (`-DryRun`) take their paths from the resolver.
+  `bl_info` version corrected 0.4.0 -> 0.7.0.
 
 ## Wave 1 primitives — merged to `main` in PR #1
 

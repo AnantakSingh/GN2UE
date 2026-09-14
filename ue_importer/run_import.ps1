@@ -10,11 +10,33 @@
 
 param(
     [string]$Descriptor = (Join-Path $PSScriptRoot "..\export\spinetree.gnue.json"),
-    [string]$Project = "C:\Users\User\Documents\Unreal Projects\GNtoUE\GNtoUE.uproject",
-    [string]$Engine = "C:\Program Files\Epic Games\UE_5.8"
+    [string]$Project = "",   # path to the .uproject; default from tools/gnue_paths.py
+    [string]$Engine = "",    # engine root;            default from tools/gnue_paths.py
+    [switch]$DryRun          # print the resolved paths and exit
 )
 
+# Defaults come from the resolver (GNUE_* env vars, gnue.config.json, or
+# auto-discovery - see PORTABILITY.md). Explicit parameters always win.
+$paths = Join-Path (Split-Path -Parent $PSScriptRoot) "tools\gnue_paths.py"
+if (-not $Project) {
+    $Project = (python $paths uproject)
+    if ($LASTEXITCODE -ne 0 -or -not $Project) { Write-Error "cannot resolve the UE project - see PORTABILITY.md"; exit 1 }
+}
+if (-not $Engine) {
+    $env:GNUE_UE_PROJECT = Split-Path -Parent $Project   # key engine discovery on this project
+    $Engine = (python $paths engine_root)
+    if ($LASTEXITCODE -ne 0 -or -not $Engine) { Write-Error "cannot resolve the engine - see PORTABILITY.md"; exit 1 }
+}
+
 $cmd = Join-Path $Engine "Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
+if ($DryRun) {
+    Write-Output "engine     = $Engine"
+    Write-Output "uproject   = $Project"
+    Write-Output "cmd        = $cmd"
+    Write-Output "descriptor = $Descriptor"
+    Write-Output "DRY RUN - nothing imported"
+    exit 0
+}
 if (-not (Test-Path $cmd)) { Write-Error "UnrealEditor-Cmd not found: $cmd"; exit 1 }
 if (-not (Test-Path $Descriptor)) { Write-Error "Descriptor not found: $Descriptor"; exit 1 }
 

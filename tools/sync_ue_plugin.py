@@ -18,8 +18,12 @@ import json
 import os
 import sys
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT = sys.argv[1] if len(sys.argv) > 1 else r"C:\Users\User\Documents\Unreal Projects\GNtoUE"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gnue_paths  # noqa: E402  (GNUE_* env / gnue.config.json / auto-discovery — PORTABILITY.md)
+
+REPO = gnue_paths.repo_root()
+# argv[1] is the highest-priority override; otherwise the resolver decides
+PROJECT = sys.argv[1] if len(sys.argv) > 1 else gnue_paths.ue_project()
 PLUGIN = os.path.join(PROJECT, "Plugins", "GNueImporter")
 PY = os.path.join(PLUGIN, "Content", "Python")
 
@@ -137,7 +141,7 @@ else:
 write("GNueImporter.uplugin", json.dumps({
     "FileVersion": 3,
     "Version": 1,
-    "VersionName": "0.7.0",
+    "VersionName": gnue_paths.version(),   # single source: blender_manifest.toml
     "FriendlyName": "GNue Importer",
     "Description": "Import Blender Geometry Nodes effects exported by the GN to UE "
                    "exporter as parametric PCG graphs. Drop export folders into "

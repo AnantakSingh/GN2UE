@@ -6,7 +6,9 @@ core.py is bpy-free; frontend_bpy.py and the UI below need Blender.
 bl_info = {
     "name": "GN to UE Exporter",
     "author": "GNtoUE research",
-    "version": (0, 4, 0),
+    # legacy field (extensions read blender_manifest.toml); keep it equal to the
+    # manifest's version — tools/make_deliverables.py refuses to package on drift
+    "version": (0, 7, 0),
     "blender": (4, 2, 0),
     "location": "3D View & Node Editor sidebar (N) > GN to UE",
     "description": "Export V1-core Geometry Nodes effects to a UE-importable descriptor folder",
