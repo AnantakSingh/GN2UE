@@ -56,6 +56,22 @@ V1X_WHITELIST = {
     "GeometryNodeAccumulateField",   # prefix sums (kernel series, seeded RNG)
 }
 
+# Wave 1 (Person A) — mesh primitives supported as *instance sources*. Each is
+# baked to an FBX at its current parameter values by frontend_bpy.bake_subgraph
+# (the generic bake path) and consumed by the importer's generic asset loop, so
+# no new descriptor block or importer capability is needed — just recognition.
+# Parametric dependence inside the primitive is frozen at export (reported as a
+# baked-asset approximation). Direct (non-instanced) geometry use is refused with
+# a clear message by the geo_* handlers below.
+BAKED_PRIMITIVES = {
+    "GeometryNodeMeshCylinder",
+    "GeometryNodeMeshCone",
+    "GeometryNodeMeshIcoSphere",
+    "GeometryNodeMeshUVSphere",
+    "GeometryNodeMeshGrid",
+    "GeometryNodeMeshCircle",
+}
+
 
 class ExportRefused(Exception):
     """Raised when the graph cannot be translated deterministically."""
@@ -116,7 +132,8 @@ def validate(ir, sess):
         if idn == "GeometryNodeGroup":
             sess.err("node %r: nested node groups are not yet inlined — apply/ungroup it" % name)
             continue
-        if idn not in V1_WHITELIST and idn not in V1X_WHITELIST:
+        if idn not in V1_WHITELIST and idn not in V1X_WHITELIST \
+                and idn not in BAKED_PRIMITIVES:
             sess.err("node %r (%s) is outside the V1/V1.x supported set — see "
                      "atlas/v1_core_nodes.md" % (name, idn))
         if nd.get("muted"):
@@ -426,6 +443,11 @@ class Lowering:
         idn = nd["idname"]
         h = getattr(self, "geo_" + idn, None)
         if h is None:
+            if idn in BAKED_PRIMITIVES:
+                raise ExportRefused(
+                    "node %r (%s) is supported as an *instance source* — wire it into "
+                    "the Instance input of Instance on Points, not directly as output "
+                    "geometry" % (nname, idn))
             raise ExportRefused("no geometry rule for %s (node %r)" % (idn, nname))
         bid = h(nname, nd)
         if out_sock == "Inverted":
@@ -738,7 +760,8 @@ def lower(ir, sess):
         if name in consumed or nd["idname"] in ("NodeGroupOutput",):
             continue
         geoish = any(s["type"] == "GEOMETRY" for s in nd["outputs"])
-        if geoish and nd["idname"] not in ("GeometryNodeMeshCube", "GeometryNodeTransform"):
+        if geoish and nd["idname"] not in ("GeometryNodeMeshCube", "GeometryNodeTransform") \
+                and nd["idname"] not in BAKED_PRIMITIVES:
             sess.warn("node %r (%s) produces geometry but was never reached from the "
                       "output — dead branch, not exported" % (name, nd["idname"]))
     return result
