@@ -167,7 +167,7 @@ with their own saved values. Nothing you tuned in UE is lost.
 - `Content/Python/` — importer, menus, GNueDrops scan, auto-apply watcher.
 - `RebuildBinaries.bat` — rebuilds the C++ for a non-launcher engine build.
 
-The Python files are **generated** from the GNtoUEresearch repo by
+The Python files are **generated** from the GN2UE repo by
 `tools/sync_ue_plugin.py`; C++ source is canonical in `ue_plugin_src/`.
 Edit there, not here.
 

@@ -1,7 +1,7 @@
 # Portability — removing hardcoded machine dependencies
 
-**Status:** approved 2026-09-14 (review amendments folded in), **in progress** — Task 1
-landed in PR #2. **Owner:** Person A. **Blocks:** every new collaborator, the V0
+**Status:** approved 2026-09-14 (review amendments folded in), **in progress** — Task 1 + Lanes A/B/C
+landed (PRs #2–#5); Lane D awaits a team decision. **Owner:** Person A. **Blocks:** every new collaborator, the V0
 public release, and any CI.
 
 GNue was built on one machine, and the build/test tooling still assumes that
@@ -211,13 +211,13 @@ dependency, so this lane can start immediately alongside Task 1.
 
 ### Lane C — Blender-side, docs, hygiene
 
-- [ ] **C1** `gnue_exporter/export_cli.py:3,14,25` — `GNUE_REPO` per §2.4; make the
+- [x] **C1** `gnue_exporter/export_cli.py:3,14,25` — `GNUE_REPO` per §2.4; make the
       default output `<repo>/export/ropebridge_v1` relative.
-- [ ] **C2** `build_v1_bridge.py:4`, `build_v1_stonecircle.py:4` — update the docstring
+- [x] **C2** `build_v1_bridge.py:4`, `build_v1_stonecircle.py:4` — update the docstring
       exec examples to use `GNUE_REPO`.
-- [ ] **C3** `ue_importer/import_gnue.py:5,7` and `ue_importer/README.md:34` — docstring
+- [x] **C3** `ue_importer/import_gnue.py:5,7` and `ue_importer/README.md:34` — docstring
       paths → `<repo>/ue_importer/import_gnue.py`.
-- [ ] **C4** **Repo identity.** Docs call this repo `GNtoUEresearch` at
+- [x] **C4** **Repo identity.** Docs call this repo `GNtoUEresearch` at
       `C:\Projects\GNtoUEresearch`; it is actually **GN2UE**. Fix
       `ONBOARDING.md:93,95,104,105,125` and `ue_plugin_src/README.md:170`, and point
       ONBOARDING §4 at this document for path setup.
@@ -228,13 +228,13 @@ dependency, so this lane can start immediately alongside Task 1.
       `.gitignore`.
 - [x] **C6 — done in PR #2.** **Add a LICENSE file.** `blender_manifest.toml:12` already declares
       `SPDX:MIT` but no LICENSE exists. Flagged in ONBOARDING §8 as a V0 blocker.
-- [ ] **C7** **The newer test scripts (P0).** `build_cylinder.py:21`,
+- [x] **C7** **The newer test scripts (P0).** `build_cylinder.py:21`,
       `build_mesh_primitives.py:20`, `build_primzoo.py:15` hardcode `REPO`, and each
       writes its result file to the original author's **Claude scratchpad path,
       session UUID included** (`C:\Users\User\AppData\Local\Temp\claude\…\ed4cc928-…`).
       On any other machine that directory does not exist. Resolve `REPO` per §2.4 and
       write results to `export/<name>/result.txt` (or `GNUE_RESULT` when set).
-- [ ] **C8** **Commit the socket runner.** Scripts are described as "exec'd over the
+- [x] **C8** **Commit the socket runner.** Scripts are described as "exec'd over the
       socket", but the runner (`bl.py`) only ever lived in a scratchpad. Add
       `tools/bl_exec.py <script>`: connects to the Blender MCP addon on port 9876,
       injects `GNUE_REPO`, runs the file, prints the output. Without it a
@@ -295,16 +295,16 @@ python tools/make_deliverables.py
 
 Checklist:
 
-- [ ] `sync_ue_plugin.py` with no arguments targets the right project.
-- [ ] `build_ue_plugin.ps1` finds the engine with **no** config file present
+- [x] `sync_ue_plugin.py` with no arguments targets the right project.
+- [x] (dry-run; target derived from the `.uproject` name) `build_ue_plugin.ps1` finds the engine with **no** config file present
       (registry auto-discovery), and builds the correct `<Project>Editor` target
       for a UE project **not** named `GNtoUE`.
-- [ ] All five headless tests run against the local project, or skip with a clear
+- [x] (walktrim PASS + cubefield SKIP verified in-engine; the other three share the same helper) All five headless tests run against the local project, or skip with a clear
       message when their fixture folder is absent.
-- [ ] `make_deliverables.py` produces both zips with a version read from one place.
+- [x] `make_deliverables.py` produces both zips with a version read from one place.
 - [ ] A grep for `C:\Users\User` and `C:\Projects\GNtoUEresearch` across
-      `*.py`, `*.ps1`, `*.bat` returns **nothing**.
-- [ ] ONBOARDING §4/§5 match reality and point here.
+      `*.py`, `*.ps1`, `*.bat` returns **nothing**. → blocked only by `tentacle_gn.py` (Lane D, D2).
+- [x] ONBOARDING §4/§5 match reality and point here.
 
 ---
 

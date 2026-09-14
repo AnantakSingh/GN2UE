@@ -17,9 +17,13 @@ import sys
 
 import bpy
 
-REPO = r"c:\Projects\GNtoUEresearch"
-RESULT = (r"C:\Users\User\AppData\Local\Temp\claude\c--Projects-GNtoUEresearch"
-          r"\ed4cc928-654d-448e-a13b-8f1d217ef8f8\scratchpad\prims_result.txt")
+# repo root: injected global (tools/bl_exec.py) -> env -> this file's folder (PORTABILITY.md §2.4)
+REPO = (globals().get("GNUE_REPO") or os.environ.get("GNUE_REPO")
+        or (os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else None))
+if not REPO:
+    raise RuntimeError("set GNUE_REPO before exec'ing this script - see PORTABILITY.md")
+RESULT = (os.environ.get("GNUE_RESULT")
+          or os.path.join(REPO, "export", "mesh_primitives_test_a", "result.txt"))
 
 # idname, low-poly input defaults, node props
 PRIMS = [

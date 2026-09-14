@@ -86,23 +86,31 @@ Three ideas do most of the work:
 | `tools/test_*.py` | Headless UE test scripts (run via `UnrealEditor-Cmd -run=pythonscript`). |
 | `build_*.py` | Scripts that build the demo/test effects **in Blender** (RopeBridge, StoneCircle, DominoSpiral, CubeField, ProxRing, ProxGarden…). |
 | `atlas/` | The 412-node Blender→UE **translation atlas** (`gn-ue-atlas.html`) + the 53-node V1 core list. |
-| `deliverables/` | Shippable zips + `README.md` (install guide) + `SUPPORTED_NODES.md` (the 57 supported nodes). |
+| `deliverables/` | Shippable zips + `README.md` (install guide) + `SUPPORTED_NODES.md` (the 63 supported nodes). |
 | `media/` | Verification screenshots. |
 | `schema/` | Descriptor v1 JSON schema (v2 is documented in `core.py`). |
 
-**Two projects, not one.** This repo (`C:\Projects\GNtoUEresearch`) is the
-**source**. The live Unreal project is separate:
-`C:\Users\User\Documents\Unreal Projects\GNtoUE\`. `sync_ue_plugin.py` copies
-the built plugin from the repo into that project's `Plugins/`.
+**Two projects, not one.** This repo (**GN2UE**, wherever you cloned it) is the
+**source**. The live Unreal project is separate — yours lives wherever you
+created it (typically `Documents\Unreal Projects\<Name>\`), and every script
+finds it through `tools/gnue_paths.py` (see [PORTABILITY.md](PORTABILITY.md)).
+`sync_ue_plugin.py` copies the built plugin from the repo into that project's
+`Plugins/`.
 
 ---
 
 ## 4. Environment setup for a new machine
 
+**You never edit paths in source.** Every build/test script resolves the repo,
+your UE project, the engine and Blender through `tools/gnue_paths.py`:
+`GNUE_*` env vars → `gnue.config.json` (copy `gnue.config.example.json`) →
+auto-discovery. Run `python tools/gnue_paths.py` to see what it finds on your
+machine. Details and the fix-up plan: [PORTABILITY.md](PORTABILITY.md).
+
 | Need | Version / notes |
 |---|---|
-| **Unreal Engine 5.8** | Epic Games Launcher install. Path assumed: `C:\Program Files\Epic Games\UE_5.8`. |
-| **Blender 5.2** (or 4.2+) | Path assumed: `C:\Program Files\Blender Foundation\Blender 5.2`. |
+| **Unreal Engine 5.8** | Epic Games Launcher install, any location — found from the registry / your project's `EngineAssociation`, or set `engine` in `gnue.config.json`. |
+| **Blender 5.2** (or 4.2+) | Any location — the newest `Blender Foundation\Blender X.Y` is auto-discovered, or set `blender` in `gnue.config.json`. |
 | **Visual Studio 2022** | With the **"Game development with C++"** workload — required to build the C++ modules. |
 | **Python 3** | For the repo's build/test scripts (any recent 3.x). Unreal has its own bundled Python for in-editor scripts. |
 | **blender-mcp add-on** (optional) | Enables driving Blender headlessly over a TCP socket (port 9876) for scripted effect building. Not required for normal use. |
@@ -122,7 +130,10 @@ day to diagnose — don't repeat it.
 1. Edit `ue_importer/import_gnue2.py`.
 2. `python tools/sync_ue_plugin.py` — pushes it into the live project's plugin.
 3. Test headless (fast, no clicking):
-   `& "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<...>\GNtoUE.uproject" -run=pythonscript -script="tools\test_cubefield_import.py"`
+   ```powershell
+   $cmd = python tools/gnue_paths.py unreal_cmd; $up = python tools/gnue_paths.py uproject
+   & $cmd $up -run=pythonscript -script="tools\test_cubefield_import.py"
+   ```
    — or reimport an effect and inspect the graph.
 4. Or test live: **Tools → GNue Importer → Reimport All Drops** in the editor.
 

@@ -31,7 +31,7 @@ unreal-mcp server involved. This grew into the shipped client plugin:
 In-editor (Output Log → Cmd set to Python, or `py` console command):
 
 ```
-py "c:/Projects/GNtoUEresearch/ue_importer/import_gnue.py"
+py "<repo>/ue_importer/import_gnue.py"
 ```
 
 Headless:

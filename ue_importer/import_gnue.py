@@ -2,9 +2,11 @@
 import_gnue.py — build a parametric PCG graph in Unreal from a .gnue.json descriptor.
 
 Runs inside Unreal's Python environment (no MCP involved):
-  in-editor :  py "c:/Projects/GNtoUEresearch/ue_importer/import_gnue.py"
-  headless  :  UnrealEditor-Cmd.exe <project.uproject> -run=pythonscript
-               -script="c:/Projects/GNtoUEresearch/ue_importer/import_gnue.py"
+  in-editor :  py "<repo>/ue_importer/import_gnue.py"
+  headless  :  powershell -File ue_importer/run_import.ps1   (engine/project resolved
+               by tools/gnue_paths.py), or by hand:
+               UnrealEditor-Cmd.exe <project.uproject> -run=pythonscript
+               -script="<repo>/ue_importer/import_gnue.py"
                (descriptor path via GNUE_DESCRIPTOR env var; defaults to
                 ../export/spinetree.gnue.json next to this script)
 
