@@ -1,8 +1,8 @@
 """StoneCircle_V1 — ancient stone circle ruins, V1-core nodes ONLY.
 
 Runs inside Blender via the blender-mcp addon socket:
-    exec(compile(open(r'c:/Projects/GNtoUEresearch/build_v1_stonecircle.py').read(),
-                 'build_v1_stonecircle.py', 'exec'))
+    python tools/bl_exec.py build_v1_stonecircle.py
+or headless:  blender --background --python build_v1_stonecircle.py   (PORTABILITY.md §2.4)
 
 Design notes for pipeline compatibility (import_gnue2 numeric kernel):
   - point positions are DETERMINISTIC (index trig) — no random leaves there

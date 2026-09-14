@@ -1,8 +1,8 @@
 """RopeBridge_V1 — parametric rope bridge + terrain scatter, V1-core nodes ONLY.
 
 Runs inside Blender (5.x) via the blender-mcp addon socket:
-    exec(compile(open(r'c:/Projects/GNtoUEresearch/build_v1_bridge.py').read(),
-                 'build_v1_bridge.py', 'exec'))
+    python tools/bl_exec.py build_v1_bridge.py
+or headless:  blender --background --python build_v1_bridge.py   (PORTABILITY.md §2.4)
 
 Every node comes from atlas/v1_core_nodes.md (the 53-node V1 core set).
 V1_WHITELIST below is the enforcement list; validate() prints any violation.

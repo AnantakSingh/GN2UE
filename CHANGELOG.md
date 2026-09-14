@@ -27,6 +27,12 @@ Node count is the running total of supported Blender nodes (see
 - Lane B: the five in-engine scripts resolve their fixture from
   `unreal.SystemLibrary.get_project_directory()` (`GNUE_TEST_FOLDER` overrides) and
   skip with a `<TAG> RESULT: SKIP` line when it is absent, instead of crashing.
+- Lane C: `export_cli.py`, `build_cylinder.py`, `build_mesh_primitives.py`, `build_primzoo.py`
+  resolve the repo from an injected `GNUE_REPO` / env / `__file__` and write results
+  under `export/` (no more scratchpad paths); docstrings and ONBOARDING/README no
+  longer assume `C:ProjectsGNtoUEresearch` or the old repo name. New
+  `tools/bl_exec.py` runs a script in the open Blender over the addon socket with
+  `GNUE_REPO` injected (single-shot, hard timeout).
 
 ## Wave 1 primitives — merged to `main` in PR #1
 

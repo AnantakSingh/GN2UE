@@ -8,9 +8,10 @@ runs the real exporter on it and asserts:
   - no ERROR in the report and no false "dead branch" warning for the Cylinder.
 
 Cylinder is supported as an *instance source*; its parameters (radius/depth/
-verts) are frozen into the baked FBX at export time. Run in the open Blender:
-    python bl.py <this file>
-Writes a PASS/FAIL summary to the scratchpad result file.
+verts) are frozen into the baked FBX at export time.
+    headless:  blender --background --python build_cylinder.py
+    socket:    python tools/bl_exec.py build_cylinder.py
+Writes a PASS/FAIL summary to export/cyl_test_a/result.txt (or GNUE_RESULT).
 """
 import importlib
 import os
@@ -18,10 +19,13 @@ import sys
 
 import bpy
 
-REPO = r"c:\Projects\GNtoUEresearch"
+# repo root: injected global (tools/bl_exec.py) -> env -> this file's folder (PORTABILITY.md §2.4)
+REPO = (globals().get("GNUE_REPO") or os.environ.get("GNUE_REPO")
+        or (os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else None))
+if not REPO:
+    raise RuntimeError("set GNUE_REPO before exec'ing this script - see PORTABILITY.md")
 OUT = os.path.join(REPO, "export", "cyl_test_a")
-RESULT = (r"C:\Users\User\AppData\Local\Temp\claude\c--Projects-GNtoUEresearch"
-          r"\ed4cc928-654d-448e-a13b-8f1d217ef8f8\scratchpad\cyl_result.txt")
+RESULT = os.environ.get("GNUE_RESULT") or os.path.join(OUT, "result.txt")
 
 GROUP_NAME = "CylTest_A"
 _log = []
