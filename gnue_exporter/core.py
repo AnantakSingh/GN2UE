@@ -16,7 +16,7 @@ Pure Python — no bpy imports. Consumes the IR dict produced by frontend_bpy.py
 Produces a v2 "graph"-family descriptor: parameters + semantic blocks +
 expression trees + asset specs. Deterministic by construction — every rule in
 this file is a fixed mapping; anything unrecognized is refused with a report,
-never guessed (see docs in ../nextstep.md and atlas/v1_core_nodes.md).
+never guessed (see ../DECISIONS.md D-001 and atlas/v1_core_nodes.md).
 """
 
 import json

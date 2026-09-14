@@ -13,15 +13,16 @@ Exposed modifier inputs (reflected by the GN->UE bridge):
   Noise Scale, Root Density, Seed, Branch
 
 Writes:
-  C:\\Projects\\GNtoUEresearch\\tentacle.blend
-  C:\\Projects\\GNtoUEresearch\\tentacle_status.txt   (SUCCESS / ERROR + traceback)
+  <this folder>\\tentacle.blend
+  <this folder>\\tentacle_status.txt   (SUCCESS / ERROR + traceback)
 """
 
 import bpy
 import os
 import traceback
 
-OUT_DIR = r"C:\Projects\GNtoUEresearch"
+OUT_DIR = (os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals()
+           else os.getcwd())   # archived: writes next to itself
 STATUS = os.path.join(OUT_DIR, "tentacle_status.txt")
 
 
