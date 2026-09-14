@@ -1,7 +1,7 @@
 # Portability — removing hardcoded machine dependencies
 
-**Status:** approved 2026-09-14 (review amendments folded in), **in progress** — Task 1 + Lanes A/B/C
-landed (PRs #2–#5); Lane D awaits a team decision. **Owner:** Person A. **Blocks:** every new collaborator, the V0
+**Status:** approved 2026-09-14 (review amendments folded in), **complete** — Task 1 + Lanes A/B/C/D
+landed (PRs #2–#6). **Owner:** Person A. **Blocks:** every new collaborator, the V0
 public release, and any CI.
 
 GNue was built on one machine, and the build/test tooling still assumes that
@@ -246,17 +246,17 @@ dependency, so this lane can start immediately alongside Task 1.
 Not path fixes; these files reference machines and projects that no longer exist
 and will mislead the next reader.
 
-- [ ] **D1** `create_spring_niagara.py:16` points at `C:\Projects\4D hands research\` —
+- [x] **D1** `create_spring_niagara.py:16` points at `C:\Projects\4D hands research\` —
       **a different project entirely.** With `create_spring_nodes.py`, these are
       pre-V1 Niagara prototypes superseded by the descriptor pipeline.
       **Delete, or move to `archive/` with a README noting they predate V1.**
-- [ ] **D2** `tentacle_gn.py:16,17,24` — orphaned experiment writing to
+- [x] **D2** `tentacle_gn.py:16,17,24` — orphaned experiment writing to
       `C:\Projects\GNtoUEresearch`. Same decision.
-- [ ] **D3** `nextstep.md` is a raw AI chat transcript from before V1 scoping, full of
+- [x] **D3** `nextstep.md` is a raw AI chat transcript from before V1 scoping, full of
       `file:///c%3A/Projects/...` links. **CONTRIBUTING §7 tells people to record
       design decisions here**, so replace it with a real decision log rather than
       deleting it.
-- [ ] **D4** `prompt.txt` is empty (0 bytes); `downloadables/files.zip` is an
+- [x] **D4** `prompt.txt` is empty (0 bytes); `downloadables/files.zip` is an
       unexplained blob. Identify or remove.
 
 ---
@@ -302,8 +302,8 @@ Checklist:
 - [x] (walktrim PASS + cubefield SKIP verified in-engine; the other three share the same helper) All five headless tests run against the local project, or skip with a clear
       message when their fixture folder is absent.
 - [x] `make_deliverables.py` produces both zips with a version read from one place.
-- [ ] A grep for `C:\Users\User` and `C:\Projects\GNtoUEresearch` across
-      `*.py`, `*.ps1`, `*.bat` returns **nothing**. → blocked only by `tentacle_gn.py` (Lane D, D2).
+- [x] A grep for `C:\Users\User` and `C:\Projects\GNtoUEresearch` across
+      `*.py`, `*.ps1`, `*.bat` returns **nothing**. ✅ (archive/ included)
 - [x] ONBOARDING §4/§5 match reality and point here.
 
 ---

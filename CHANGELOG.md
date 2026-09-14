@@ -9,7 +9,7 @@ Node count is the running total of supported Blender nodes (see
 [deliverables/SUPPORTED_NODES.md](deliverables/SUPPORTED_NODES.md) and
 [ROADMAP.md](ROADMAP.md)).
 
-## [Unreleased] — Portability (see PORTABILITY.md)
+## [Unreleased] — Portability (complete — see PORTABILITY.md)
 
 ### Added
 - `tools/gnue_paths.py` — one resolver for repo / UE project / engine / Blender /
@@ -33,6 +33,11 @@ Node count is the running total of supported Blender nodes (see
   longer assume `C:ProjectsGNtoUEresearch` or the old repo name. New
   `tools/bl_exec.py` runs a script in the open Blender over the addon socket with
   `GNUE_REPO` injected (single-shot, hard timeout).
+- Lane D: pre-V1 prototypes moved to `archive/prototypes/` (Card Spring GN + Niagara,
+  Repeat-Zone tentacle, the M1 golden-bake and raw-graph scripts from `files.zip`) with a
+  README; `prompt.txt` (empty), `downloadables/files.zip` and the raw transcript
+  `nextstep.md` removed. New **`DECISIONS.md`** (D-001…D-010) is the decision log;
+  CONTRIBUTING §7 and `core.py` point to it.
 
 ## Wave 1 primitives — merged to `main` in PR #1
 

@@ -160,5 +160,5 @@ Before requesting review, and what the reviewer checks:
 - **Weekly:** merge outstanding PRs, re-tag a deliverable if the node count moved
   (`python tools/make_deliverables.py`), update the roadmap checkboxes.
 - **Decisions that change the descriptor or the whitelist tiers** get written down —
-  a short note in [nextstep.md](nextstep.md) or the PR description — so the reasoning
-  survives.
+  an entry in [DECISIONS.md](DECISIONS.md) (referenced from the PR) — so the
+  reasoning survives.

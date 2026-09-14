@@ -13,7 +13,7 @@ PLUGINS REQUIRED:
 HOW TO RUN:
   Method A (Recommended): Edit > Execute Python Script > select this file
   Method B: Output Log (Python mode):
-    exec(open(r"C:\Projects\4D hands research\TestDatasetCreation\create_spring_niagara.py").read())
+    exec(open(r"archive/prototypes/create_spring_niagara.py").read())
 
 NOTE ON UE 5.8.1 MCP PLUGIN:
   UE 5.8.1 includes an experimental MCP plugin that lets AI agents control
