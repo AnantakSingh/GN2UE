@@ -166,9 +166,11 @@ def wpo_code(show_dir):
     assert ret in wave, "generated HLSL changed shape"
     wave = wave.replace(ret, "float wave = amp * (0.75 * nA + 0.25 * nB);")
     return (wave + "\n"
-            "// spin about UE +Y (three +X) around the instance pivot; sign checked visually (spec 4.3)\n"
+            "// spin about UE +Y (three +X) around the instance pivot. Sign derived from the\n"
+            "// web build's R_x(+theta): the die's top rolls toward three +Z = UE -X, so the\n"
+            "// top face cycles 1 -> 5 -> 6 -> 2 with positive theta (theta = pi shows 6 up).\n"
             "float c = cos(theta), s = sin(theta);\n"
-            "float3 r = float3(P.x * c + P.z * s, P.y, -P.x * s + P.z * c);\n"
+            "float3 r = float3(P.x * c - P.z * s, P.y, P.x * s + P.z * c);\n"
             "float dz = z - zFront;\n"
             "float height = wave - (x * x + dz * dz) / horizonR;\n"
             "return (r - P) + float3(0, 0, (height + yOff) * 100.0);\n")
