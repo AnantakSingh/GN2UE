@@ -38,3 +38,6 @@ DerivedDataCache/
 
 # Keep: source (.py, .cpp/.h, .md), build scripts, atlas, schema, the .blend,
 # and the shipped deliverable zips. Everything above is generated or transient.
+
+# Sea of Probabilities showcase: generated die FBX (blender/make_die.py rebuilds it)
+showcase/sea_of_probabilities/build/

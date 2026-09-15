@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "Sea of Probabilities",
+	"Description": "Native UE port of the Sea of Probabilities web piece: an ISM dice ocean with simplex waves, hover ripples, click splashes, neon glow and idle life (C++ per-die simulation + material WPO).",
+	"Category": "Showcase",
+	"CreatedBy": "Anantak",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "SeaOfProbabilities",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

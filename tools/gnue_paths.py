@@ -292,7 +292,8 @@ def version():
 # ---------------------------------------------------------------- CLI
 
 _ORDER = ["repo_root", "version", "ue_project", "uproject", "project_name", "editor_target",
-          "engine_association", "engine_root", "unreal_cmd", "plugin_dir", "drops_dir", "blender_exe"]
+          "engine_association", "engine_root", "unreal_cmd", "unreal_editor", "plugin_dir",
+          "drops_dir", "blender_exe"]
 
 
 def describe():
