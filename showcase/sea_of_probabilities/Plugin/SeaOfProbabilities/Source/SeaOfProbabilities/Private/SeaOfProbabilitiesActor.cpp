@@ -38,10 +38,20 @@ void ASeaOfProbabilitiesActor::OnConstruction(const FTransform&)
 	RebuildField();
 }
 
+bool ASeaOfProbabilitiesActor::EnsureState()
+{
+	const int32 N = Cols * Rows;
+	const bool bOk = DieCount == N && Theta.Num() == N && Omega.Num() == N && YOffset.Num() == N
+		&& YVel.Num() == N && Glow.Num() == N && Hue.Num() == N && X3.Num() == N && Z3.Num() == N
+		&& Activated.Num() == N && Dice && Dice->GetInstanceCount() == N;
+	if (!bOk) RebuildField();
+	return DieCount > 0;
+}
+
 void ASeaOfProbabilitiesActor::BeginPlay()
 {
 	Super::BeginPlay();
-	if (DieCount == 0) RebuildField();
+	EnsureState();
 	LastInput = NowSeconds();
 	NextIdle = LastInput + IdleAfter;
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -101,6 +111,7 @@ void ASeaOfProbabilitiesActor::RebuildField()
 
 void ASeaOfProbabilitiesActor::Scramble()
 {
+	if (!EnsureState()) return;
 	for (int32 I = 0; I < DieCount; ++I) { Activated[I] = 0; Omega[I] += 5.f + Hash01(I, 7) * 6.f; }
 }
 
@@ -173,7 +184,7 @@ bool ASeaOfProbabilitiesActor::PickField(FVector2D& OutXZ) const
 
 void ASeaOfProbabilitiesActor::Pulse(int32 J, float K)
 {
-	if (J < 0 || J >= DieCount) return;
+	if (!EnsureState() || J < 0 || J >= DieCount) return;
 	const int32 Jx = J % Cols, Jz = J / Cols;
 	const int32 Cell = FMath::CeilToInt(PulseRadius / Spacing);
 	for (int32 Dz = -Cell; Dz <= Cell; ++Dz)
@@ -333,7 +344,7 @@ void ASeaOfProbabilitiesActor::EnsureStartCamera()
 void ASeaOfProbabilitiesActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (DieCount == 0) return;
+	if (!EnsureState()) return;
 	const double Now = NowSeconds();
 	const float Dt = FMath::Min(DeltaSeconds, 0.033f);
 	if (!bFrozen) WaveT += Dt * WaveSpeed * (bReducedMotion ? 0.12f : 1.f);
@@ -341,6 +352,14 @@ void ASeaOfProbabilitiesActor::Tick(float DeltaSeconds)
 	const bool bGame = GetWorld() && GetWorld()->IsGameWorld();
 	if (bGame)
 	{
+		// BeginPlay runs before the controller possesses its pawn, and possession
+		// resets the view target - so keep re-asserting the spec camera until it sticks.
+		if (!StartCamera.IsValid()) EnsureStartCamera();
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			if (StartCamera.IsValid() && PC->GetViewTarget() != StartCamera.Get())
+				PC->SetViewTargetWithBlend(StartCamera.Get(), 0.f);
+		}
 		// UE's FOV is horizontal; keep the spec's 42 degrees VERTICAL whatever the aspect
 		if (StartCamera.IsValid() && GEngine && GEngine->GameViewport)
 		{

@@ -60,4 +60,50 @@ _(newest at the bottom)_
 - **Spin sign fixed in source, NOT yet rebuilt:** `sea_materials.py` WPO now `r = (P.x*c - P.z*s, P.y, P.x*s + P.z*c)`. Derived from the web's `R_x(+θ)`: top rolls toward three +Z = UE −X; cycle 1→5→6→2 for +θ (the web source *comment* says 1→2→6→5 — the comment is backwards, the math is not; note in parity report).
 - **Resume order:** (1) `CaptureViewport` the level, compare to `Sea of Probs DocPics/Chosen/20260909_161232.jpg` (near-black glossy dice, strong highlights, saturated pips, curved horizon) → tune sun intensity / exposure bias / fog; (2) rebuild the three die materials with the corrected spin — either headless `SEA_STEP=3` with the editor closed, or in-editor; (3) `StartPIE` + Slate mouse/key simulation to exercise hover ripple, click splash, Space freeze, idle life; read `LogSea` via `GetLogEntries`; (4) then steps 7–10.
 
+**2026-09-15 — session 3 (MCP verification): steps 0–7 done and verified in PIE.**
+
+Driven entirely through `tools/ue_mcp.py` (single-shot, bounded; python process count
+never moved). Findings and fixes, in order:
+
+- **Exposure:** the level rendered black. UE manual exposure sits at EV100 ≈ 9.9; three's
+  `exposure 0.52` is a pre-tonemap multiplier and a 4-lux sun already matches three's
+  `intensity 4` radiance → bias ≈ 9.2 derived, **10.2** after measuring the fogged
+  background. Baked into `sea_level.py`.
+- **Sky light** had no cubemap (my engine path check failed in the commandlet). Now
+  `/Engine/EditorMaterials/AssetViewer/EpicQuadPanorama_CC+EV1` — the asset-viewer studio
+  panorama, closest engine match to three's RoomEnvironment. Baked in.
+- **Nanite** was on for `SM_Die` (5.8 import default); off now (`build_sea_assets.py` step 1
+  disables it) — classic ISM with WPO + custom data.
+- **Lumen off** for the piece: `reflectionMethod None`, `dynamicGlobalIlluminationMethod
+  None` → sky-light IBL, exactly three's model and no speckle on black metal. Baked in.
+- **PIE crash** (`Array index out of bounds: 0 into an array of size 0` in `Integrate`):
+  serialized `DieCount` with un-serialized state arrays in the PIE duplicate. Fixed with
+  `EnsureState()` + `Transient` state; **PIE now stable.**
+- **Camera:** the project's first-person game mode was spawning a falling character.
+  Step 7 done properly instead: **`ASeaCameraPawn`** (OrbitControls semantics — left-drag
+  orbit, right-drag pan, wheel dolly, damping 0.08, polar ≥ 0.03 rad, distance 10–260,
+  vertical FOV 42° at any aspect, `bLockCamera`) + **`ASeaGameMode`**, set as the level's
+  DefaultGameMode. `SeaStats` reads back the exact spec pose:
+  `{"position":[-23.55,27.50,65.72],"target":[2.67,-22.52,6.29],"fov":42}`.
+- **Console commands** on the pawn (`Exec`): `SeaSplash x z k`, `SeaPulse cell k`,
+  `SeaScramble`, `SeaFreeze`, `SeaCam`, `SeaSetCam px py pz tx ty tz`, `SeaStats`.
+  Reachable from the editor's status-bar console in **Python mode**:
+  `import unreal; w = unreal.EditorLevelLibrary.get_game_world(); unreal.SystemLibrary.execute_console_command(w, 'SeaSplash 0 0 1')`.
+- **Verified visually in PIE** (`CaptureEditorImage`, since `CaptureViewport` renders the
+  editor world): spec framing; waves; **idle life** rippling/splashing on its own after 4 s;
+  a console `SeaSplash 0 0 1` produced the travelling **ring front** of kicked, spinning dice
+  with **blue↔pink pip glow** fading behind it — the reference look.
+- **Spin sign** fixed analytically (matches the web's `R_x(+θ)`: 1→5→6→2, top toward the
+  viewer); not separately eyeballed in a still.
+- **MCP tool notes:** `SetCameraTransform` wants `{location, rotation:{pitch,yaw,roll}}`;
+  `ObjectTools.set_properties` wants `values` as a **JSON string** with camelCase field
+  names inside structs (`Settings.autoExposureBias`); `CaptureEditorImage` for what the user
+  sees; `find_actors` requires `tag` + `collision_channels`; the level can't be saved via
+  `save_actor` (not OFPA) — regenerate with step 5 instead (delete the `.umap` on disk first).
+
+**Open:** real-mouse hover/click feel (synthetic Slate events can't be attributed — needs a
+human at the machine), step 8 tweak panel + JSON/SaveGame, step 9 presets + FPS (measure with
+the editor in the foreground — background throttle reads exactly 3 fps), step 10 parity
+report.
+
 **To resume:** open the editor on `/Game/SeaOfProbabilities/L_SeaOfProbabilities`, PIE, hover/click/Space. Rebuild after C++ edits with `python showcase/sea_of_probabilities/tools/sync_sea_plugin.py --build` (editor closed); re-run asset steps with `SEA_STEP=n` via `tools/build_sea_assets.py`.

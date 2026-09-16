@@ -44,6 +44,14 @@ def step1_import_die():
     if not EAL.does_asset_exist(MESH_PATH):
         return False, "import produced no asset at %s" % MESH_PATH
     sm = EAL.load_asset(MESH_PATH)
+    # UE 5.8 imports static meshes with Nanite ON; the die is 256 tris and animates
+    # through WPO + per-instance custom data, so keep it a classic ISM mesh.
+    try:
+        ns = sm.get_editor_property("nanite_settings")
+        ns.set_editor_property("enabled", False)
+        unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).set_nanite_settings(sm, ns, True)
+    except Exception as e:  # noqa: BLE001
+        log("nanite disable skipped: %s" % e)
     mats = list(sm.static_materials)
     slots = [str(m.material_slot_name) for m in mats]
     box = sm.get_bounding_box()

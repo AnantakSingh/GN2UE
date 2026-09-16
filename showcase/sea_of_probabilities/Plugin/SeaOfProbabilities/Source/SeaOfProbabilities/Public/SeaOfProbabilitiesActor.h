@@ -79,8 +79,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Idle") float IdleCursorSpeed = 0.12f;
 	UPROPERTY(EditAnywhere, Category = "Idle") float IdleCursorStrength = 0.7f;
 
-	// ---- camera (fixed until the orbit pawn lands - step 7)
-	UPROPERTY(EditAnywhere, Category = "Camera") bool bSpawnStartCamera = true;
+	// ---- camera: normally provided by ASeaCameraPawn (ASeaGameMode); this fallback
+	// spawns a fixed camera only when the level runs under some other game mode
+	UPROPERTY(EditAnywhere, Category = "Camera") bool bSpawnStartCamera = false;
 	UPROPERTY(EditAnywhere, Category = "Camera") float VerticalFov = 42.f;
 
 	// ---- assets
@@ -92,9 +93,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category = "Assets") TObjectPtr<UInstancedStaticMeshComponent> Dice;
 
-	// ---- runtime state exposed for the HUD / readouts
-	UPROPERTY(VisibleAnywhere, Category = "State") bool bFrozen = false;
-	UPROPERTY(VisibleAnywhere, Category = "State") int32 DieCount = 0;
+	// ---- runtime state exposed for the HUD / readouts. Transient: the per-die
+	// arrays below are not UPROPERTYs, so a serialized DieCount with empty arrays
+	// (PIE duplicate / runtime load, where native OnConstruction does not rerun)
+	// must never be trusted - see EnsureState().
+	UPROPERTY(VisibleAnywhere, Transient, Category = "State") bool bFrozen = false;
+	UPROPERTY(VisibleAnywhere, Transient, Category = "State") int32 DieCount = 0;
 
 	UFUNCTION(BlueprintCallable, Category = "Sea") void RebuildField();
 	UFUNCTION(BlueprintCallable, Category = "Sea") void Scramble();
@@ -130,6 +134,8 @@ private:
 	TWeakObjectPtr<ACameraActor> StartCamera;
 
 	static float Hash01(uint32 I, uint32 Salt);
+	/** True when the per-die arrays match the ISM; rebuilds when they don't. */
+	bool EnsureState();
 	int32 CellAt(double X3, double Z3) const;      // nearest cell or -1 (0.55*spacing rule)
 	bool PickField(FVector2D& OutXZ) const;         // mouse ray vs analytic height field
 	void HandleInput(double Now);

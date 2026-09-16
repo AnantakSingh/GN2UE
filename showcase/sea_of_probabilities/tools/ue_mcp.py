@@ -95,6 +95,20 @@ def call(name, args):
         with open(out, "wb") as f:
             f.write(base64.b64decode(imgs[0]["data"]))
         text += "\n[image saved: %s]" % os.path.abspath(out)
+    # some tools return {"returnValue":{"image":{"mimeType","data"}}} as text
+    if "\"data\"" in text and ("\"image\"" in text or "\"mimeType\"" in text):
+        try:
+            import base64, os, time
+            obj = json.loads(text)
+            rv = obj.get("returnValue", obj)
+            img = rv.get("image") if isinstance(rv, dict) and "image" in rv else rv   # {"image":{..}} or {mimeType,data}
+            if isinstance(img, dict) and img.get("data"):
+                out = OPTS.get("image_out") or "ue_mcp_image_%d.png" % int(time.time())
+                with open(out, "wb") as f:
+                    f.write(base64.b64decode(img["data"]))
+                text = "[image saved: %s (%s)]" % (os.path.abspath(out), img.get("mimeType"))
+        except Exception as e:
+            text = "[image decode failed: %s] " % e + text[:200]
     if res.get("isError"):
         text = "TOOL ERROR: " + text
     return text or json.dumps(res)[:3000]
