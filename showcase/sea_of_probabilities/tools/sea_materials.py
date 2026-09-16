@@ -45,7 +45,9 @@ def srgb_to_linear(hexstr):
 
 
 MPC_SCALARS = [("T", 0.0), ("WaveAmp", 7.0), ("WaveScale", 0.018), ("HorizonR", 1010.0), ("ZFront", 59.4),
-               ("GlowStrength", 4.0), ("Vignette", 0.45), ("FogNear", 24.0), ("FogFar", 95.0), ("RedAce", 0.0)]
+               ("GlowStrength", 4.0), ("Vignette", 0.45), ("FogNear", 24.0), ("FogFar", 95.0), ("RedAce", 0.0),
+               # grid geometry for the wave texture <-> die mapping (pushed by the actor)
+               ("Cols", 116.0), ("Rows", 100.0), ("Spacing", 1.2), ("W", 138.0), ("D", 118.8)]
 MPC_VECTORS = [("GlowColorA", srgb_to_linear("#0080ff")), ("GlowColorB", srgb_to_linear("#ff0066")),
                ("DiceColor", srgb_to_linear("#000000")), ("BgColor", srgb_to_linear("#242424")),
                ("PipColor", srgb_to_linear("#17171d")), ("AceColor", srgb_to_linear("#c73535"))]
@@ -158,31 +160,62 @@ class MatBuilder:
         return self.mat
 
 
+UV_CODE = ("float ix = round((x + W * 0.5) / spacing), iz = round((z + D * 0.5) / spacing);\n"
+           "return float2((ix + 0.5) / cols, (iz + 0.5) / rows);\n")
+UV_INPUTS = ["x", "z", "cols", "rows", "spacing", "W", "D"]
+
+
 def wpo_code(show_dir):
-    """Custom node body: inputs P, theta, yOff, x, z, t, f, amp, horizonR, zFront -> float3 offset (cm)."""
-    with open(os.path.join(show_dir, "noise", "SeaNoise_wave.hlsl"), "r", encoding="utf-8") as f:
-        wave = f.read()
-    ret = "return amp * (0.75 * nA + 0.25 * nB);"
-    assert ret in wave, "generated HLSL changed shape"
-    wave = wave.replace(ret, "float wave = amp * (0.75 * nA + 0.25 * nB);")
-    return (wave + "\n"
+    """Die WPO Custom node: inputs P, uv, WaveTex, StateTex -> float3 offset (cm).
+
+    Everything dynamic comes from two Cols x Rows textures sampled at the die's texel:
+    WaveRT (GPU-drawn: wave + horizon height) and StateRT (CPU-uploaded: theta, yOffset,
+    glow, hue). The ISM instance buffer holds only the die's grid position and is never
+    dirtied after the build - any dirty instance makes UE re-upload the whole buffer
+    (~58 ms at 262k), which was the last frame-rate ceiling."""
+    return ("float4 st = Texture2DSampleLevel(StateTex, StateTexSampler, uv, 0);   // theta, yOff, glow, hue\n"
+            "float theta = st.r, yOff = st.g;\n"
             "// spin about UE +Y (three +X) around the instance pivot. Sign derived from the\n"
             "// web build's R_x(+theta): the die's top rolls toward three +Z = UE -X, so the\n"
             "// top face cycles 1 -> 5 -> 6 -> 2 with positive theta (theta = pi shows 6 up).\n"
             "float c = cos(theta), s = sin(theta);\n"
             "float3 r = float3(P.x * c - P.z * s, P.y, P.x * s + P.z * c);\n"
+            "// WaveRT stores 1 + h/1024 (see wave_code: emissive is clamped at 0 and most heights\n"
+            "// are negative); the unbound default (white) therefore decodes to h = 0.\n"
+            "float h = (Texture2DSampleLevel(WaveTex, WaveTexSampler, uv, 0).r - 1.0) * 1024.0;\n"
+            "return (r - P) + float3(0, 0, (h + yOff) * 100.0);\n")
+
+
+WPO_INPUTS = ["P", "uv", "WaveTex", "StateTex"]
+
+
+def wave_code(show_dir):
+    """M_Wave Custom node (UI domain, drawn to WaveRT every frame): for texel uv, the die at
+    (ix, iz) -> its three-frame (x, z) -> two-octave simplex wave (spec 4.2, generated
+    bit-exact body) minus the horizon term. Output: height in three units (R32F)."""
+    with open(os.path.join(show_dir, "noise", "SeaNoise_wave.hlsl"), "r", encoding="utf-8") as f:
+        wave = f.read()
+    ret = "return amp * (0.75 * nA + 0.25 * nB);"
+    assert ret in wave, "generated HLSL changed shape"
+    wave = wave.replace(ret, "float wave = amp * (0.75 * nA + 0.25 * nB);")
+    return ("float ix = floor(uv.x * cols), iz = floor(uv.y * rows);\n"
+            "float x = -W * 0.5 + ix * spacing, z = -D * 0.5 + iz * spacing;\n"
+            + wave + "\n"
             "float dz = z - zFront;\n"
-            "float height = wave - (x * x + dz * dz) / horizonR;\n"
-            "return (r - P) + float3(0, 0, (height + yOff) * 100.0);\n")
+            # The UI-domain pixel shader clamps emissive at 0 (GetMaterialEmissive) and the horizon
+            # term makes most heights negative -> the field rendered flat. Encode 1 + h/1024
+            # (R32F keeps ~1e-4 three-units of precision there); the die WPO decodes it.
+            "return 1.0 + (wave - (x * x + dz * dz) / horizonR) / 1024.0;\n")
 
 
-WPO_INPUTS = ["P", "theta", "yOff", "x", "z", "t", "f", "amp", "horizonR", "zFront"]
+WAVE_INPUTS = ["uv", "t", "f", "amp", "horizonR", "zFront", "cols", "rows", "spacing", "W", "D"]
 
 
 def add_die_common(b, mpc, show_dir):
     """Clear-coat surface + the shared WPO, routed through Make Material
     Attributes (the Python MaterialProperty enum has no clear-coat pins).
-    Returns the attributes node; callers plug BaseColor / EmissiveColor into it."""
+    Returns (attrs, state): the attributes node and the pixel-shader StateRT sample
+    (outputs: B = glow, A = hue) for callers that colour the pips."""
     b.mat.set_editor_property("shading_model",
                               enum_member(unreal.MaterialShadingModel, "MSM_CLEAR_COAT", "MSM_CLEARCOAT", contains="CLEAR"))
     b.mat.set_editor_property("used_with_instanced_static_meshes", True)
@@ -192,28 +225,48 @@ def add_die_common(b, mpc, show_dir):
     b.link(b.const(0.71), attrs, "Roughness")
     b.link(b.const(0.09), attrs, "ClearCoat")
     b.link(b.const(0.29), attrs, "ClearCoatRoughness")
+    black = EAL.load_asset("/Engine/EngineResources/Black")
+    # the die's texel in both Cols x Rows textures, from its (static) grid position
+    uv = b.custom(UV_CODE, UV_INPUTS, unreal.CustomMaterialOutputType.CMOT_FLOAT2, x=-600)
+    b.link(b.custom_data(4), uv, "x")
+    b.link(b.custom_data(5), uv, "z")
+    for pin, pname in (("cols", "Cols"), ("rows", "Rows"), ("spacing", "Spacing"), ("W", "W"), ("D", "D")):
+        b.link(b.mpc(mpc, pname), uv, pin)
     wpo = b.custom(wpo_code(show_dir), WPO_INPUTS, unreal.CustomMaterialOutputType.CMOT_FLOAT3)
     b.link(b.local_pos(), wpo, "P")
-    b.link(b.custom_data(0), wpo, "theta")
-    b.link(b.custom_data(1), wpo, "yOff")
-    b.link(b.custom_data(4), wpo, "x")
-    b.link(b.custom_data(5), wpo, "z")
-    for pin, pname in (("t", "T"), ("f", "WaveScale"), ("amp", "WaveAmp"), ("horizonR", "HorizonR"), ("zFront", "ZFront")):
-        b.link(b.mpc(mpc, pname), wpo, pin)
+    b.link(uv, wpo, "uv")
+    white = EAL.load_asset("/Engine/EngineResources/WhiteSquareTexture")   # decodes to h = 0 when unbound
+    for pname, pin, default in (("WaveRT", "WaveTex", white), ("StateRT", "StateTex", black)):
+        tex = b.ex(unreal.MaterialExpressionTextureObjectParameter, -900)
+        tex.set_editor_property("parameter_name", pname)
+        tex.set_editor_property("texture", default)
+        b.link(tex, wpo, pin)
     b.link(wpo, attrs, "WorldPositionOffset")
+    # pixel-shader read of the state (float4: theta, yOff, glow, hue) for the pip colour.
+    # A Custom node, not a TextureSampleParameter2D: the latter validates its sampler type
+    # against the (sRGB) default texture and fails to compile for a linear RGBA32F target.
+    state = b.custom("return Texture2DSampleLevel(StateTex, StateTexSampler, uv, 0);",
+                     ["uv", "StateTex"], unreal.CustomMaterialOutputType.CMOT_FLOAT4, x=-600)
+    b.link(uv, state, "uv")
+    tex2 = b.ex(unreal.MaterialExpressionTextureObjectParameter, -900)
+    tex2.set_editor_property("parameter_name", "StateRT")
+    tex2.set_editor_property("texture", black)
+    b.link(tex2, state, "StateTex")
     b.out(attrs, MP.MP_MATERIAL_ATTRIBUTES)
-    return attrs
+    return attrs, state
 
 
-PIP_BASE = ("float3 neon = lerp(A, B, hue);\n"
+PIP_BASE = ("float glow = st.b, hue = st.a;\n"
+            "float3 neon = lerp(A, B, hue);\n"
             "return lerp(pipCol * diceCol, neon * 0.35, glow);\n")
-PIP_EMIS = ("float3 neon = lerp(A, B, hue);\n"
+PIP_EMIS = ("float glow = st.b, hue = st.a;\n"
+            "float3 neon = lerp(A, B, hue);\n"
             "return neon * glow * strength;\n")
 
 
 def build_pip_material(name, mpc, show_dir, ace):
     b = MatBuilder(name)
-    attrs = add_die_common(b, mpc, show_dir)
+    attrs, state = add_die_common(b, mpc, show_dir)
     if ace:
         # pipCol = lerp(PipColor, AceColor, RedAce)
         mix = b.custom("return lerp(pip, ace, redAce);", ["pip", "ace", "redAce"],
@@ -224,12 +277,12 @@ def build_pip_material(name, mpc, show_dir, ace):
         pipcol = mix
     else:
         pipcol = b.mpc(mpc, "PipColor")
-    base = b.custom(PIP_BASE, ["A", "B", "hue", "glow", "pipCol", "diceCol"], unreal.CustomMaterialOutputType.CMOT_FLOAT3)
-    emis = b.custom(PIP_EMIS, ["A", "B", "hue", "glow", "strength"], unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+    base = b.custom(PIP_BASE, ["A", "B", "st", "pipCol", "diceCol"], unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+    emis = b.custom(PIP_EMIS, ["A", "B", "st", "strength"], unreal.CustomMaterialOutputType.CMOT_FLOAT3)
     ca, cb = b.mpc(mpc, "GlowColorA"), b.mpc(mpc, "GlowColorB")
-    hue, glow = b.custom_data(3), b.custom_data(2)
     for n in (base, emis):
-        b.link(ca, n, "A"); b.link(cb, n, "B"); b.link(hue, n, "hue"); b.link(glow, n, "glow")
+        b.link(ca, n, "A"); b.link(cb, n, "B")
+        b.link(state, n, "st")            # StateRT texel: (theta, yOff, glow, hue)
     b.link(pipcol, base, "pipCol")
     b.link(b.mpc(mpc, "DiceColor"), base, "diceCol")
     b.link(b.mpc(mpc, "GlowStrength"), emis, "strength")
@@ -240,8 +293,22 @@ def build_pip_material(name, mpc, show_dir, ace):
 
 def build_body_material(mpc, show_dir):
     b = MatBuilder("M_DieBody")
-    attrs = add_die_common(b, mpc, show_dir)
+    attrs, _state = add_die_common(b, mpc, show_dir)
     b.link(b.mpc(mpc, "DiceColor"), attrs, "BaseColor")
+    return b.finish()
+
+
+def build_wave_material(mpc, show_dir):
+    """M_Wave: UI-domain material drawn into WaveRT (one texel per die) every frame."""
+    b = MatBuilder("M_Wave", unreal.MaterialDomain.MD_UI)
+    b.mat.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
+    node = b.custom(wave_code(show_dir), WAVE_INPUTS, unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    uv = b.ex(unreal.MaterialExpressionTextureCoordinate, -900)
+    b.link(uv, node, "uv")
+    for pin, pname in (("t", "T"), ("f", "WaveScale"), ("amp", "WaveAmp"), ("horizonR", "HorizonR"), ("zFront", "ZFront"),
+                       ("cols", "Cols"), ("rows", "Rows"), ("spacing", "Spacing"), ("W", "W"), ("D", "D")):
+        b.link(b.mpc(mpc, pname), node, pin)
+    b.out(node, MP.MP_EMISSIVE_COLOR)      # UI domain: Final Color
     return b.finish()
 
 
@@ -288,6 +355,7 @@ def build_all(show_dir, mesh_path):
     body = build_body_material(mpc, show_dir)
     pips = build_pip_material("M_DiePips", mpc, show_dir, ace=False)
     ace = build_pip_material("M_DieAce", mpc, show_dir, ace=True)
+    wave = build_wave_material(mpc, show_dir)
     fog = build_post_fog(mpc)
     vig = build_post_vignette(mpc)
     # assign to the die's three slots
@@ -300,5 +368,5 @@ def build_all(show_dir, mesh_path):
             return False, "mesh has no slot %s (slots: %s)" % (slot, list(by_slot))
         sm.set_material(i, mat)
     EAL.save_asset(mesh_path)
-    built = [m.get_name() for m in (body, pips, ace, fog, vig)]
+    built = [m.get_name() for m in (body, pips, ace, wave, fog, vig)]
     return True, "mpc=%s materials=%s slots=%s" % (mpc.get_name(), built, by_slot)

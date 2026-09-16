@@ -7,6 +7,9 @@
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpectatorPawn.h"
+#include "Misc/FileHelper.h"
+#include "RHI.h"
+#include "Stats/Stats.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogSeaCam, Display, All);
 
@@ -79,16 +82,24 @@ void ASeaCameraPawn::ReadInput(float)
 	const FVector2D Mouse = bHaveMouse ? FVector2D(Mx, My) : FVector2D(-1, -1);
 	FVector2D Vp(1920, 1080);
 	if (GEngine && GEngine->GameViewport) GEngine->GameViewport->GetViewportSize(Vp);
-	if (bHaveMouse && LastMouse.X >= 0 && !bLockCamera)
+	// OrbitControls only tracks a drag that began on the canvas: latch the press
+	// while the cursor is inside the viewport, and never orbit on a phantom button
+	// state (synthetic/injected events can leave one behind)
+	const bool bLeft = PC->IsInputKeyDown(EKeys::LeftMouseButton), bRight = PC->IsInputKeyDown(EKeys::RightMouseButton);
+	const bool bInside = bHaveMouse && Mouse.X >= 0 && Mouse.Y >= 0 && Mouse.X <= Vp.X && Mouse.Y <= Vp.Y;
+	if (!bLeft && !bRight) bDragging = false;
+	else if (!bWasButtonDown && bInside) bDragging = true;
+	bWasButtonDown = bLeft || bRight;
+	if (bHaveMouse && LastMouse.X >= 0 && !bLockCamera && bDragging)
 	{
 		const FVector2D Delta = Mouse - LastMouse;
-		if (PC->IsInputKeyDown(EKeys::LeftMouseButton))
+		if (bLeft)
 		{
 			// OrbitControls: a drag of the full viewport height = 2*pi (rotateSpeed 1)
 			YawDelta -= 360.0 * Delta.X / Vp.Y;
 			ElevDelta += 360.0 * Delta.Y / Vp.Y;
 		}
-		else if (PC->IsInputKeyDown(EKeys::RightMouseButton))
+		else if (bRight)
 		{
 			// pan: move the target in the camera plane; perspective pan scale (panSpeed 1)
 			const double TargetDist = Distance * FMath::Tan(FMath::DegreesToRadians(VerticalFov * 0.5)) * 2.0 / Vp.Y;
@@ -108,6 +119,8 @@ void ASeaCameraPawn::ReadInput(float)
 void ASeaCameraPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	// smoothed fps for SeaStats (a single frame can be inflated by a blocking tool call)
+	if (DeltaSeconds > 0.f) FpsAvg = FpsAvg <= 0.f ? 1.f / DeltaSeconds : FMath::Lerp(FpsAvg, 1.f / DeltaSeconds, 0.05f);
 	ReadInput(DeltaSeconds);
 	// damping exactly like OrbitControls: apply a fraction, decay the rest
 	Yaw += YawDelta * DampingFactor;       YawDelta *= (1.0 - DampingFactor);
@@ -164,10 +177,48 @@ void ASeaCameraPawn::SeaSetCam(float Px, float Py, float Pz, float Tx, float Ty,
 	SeaCam();
 }
 
+void ASeaCameraPawn::SeaJson()
+{
+	if (ASeaOfProbabilitiesActor* S = Sea()) UE_LOG(LogSeaCam, Display, TEXT("SeaJson %s"), *S->ExportSettingsJson());
+}
+
+void ASeaCameraPawn::SeaSet(const FString& Key, const FString& Value)
+{
+	if (ASeaOfProbabilitiesActor* S = Sea()) UE_LOG(LogSeaCam, Display, TEXT("SeaSet %s=%s -> %s"), *Key, *Value, S->SetParam(Key, Value) ? TEXT("ok") : TEXT("rejected"));
+}
+
+void ASeaCameraPawn::SeaSave() { if (ASeaOfProbabilitiesActor* S = Sea()) S->SaveSettings(); }
+void ASeaCameraPawn::SeaLoad() { if (ASeaOfProbabilitiesActor* S = Sea()) UE_LOG(LogSeaCam, Display, TEXT("SeaLoad -> %d"), S->LoadSettings() ? 1 : 0); }
+void ASeaCameraPawn::SeaReset() { if (ASeaOfProbabilitiesActor* S = Sea()) S->ResetDefaults(); }
+
+void ASeaCameraPawn::SeaWriteJson(const FString& Path)
+{
+	if (ASeaOfProbabilitiesActor* S = Sea())
+	{
+		const bool bOk = FFileHelper::SaveStringToFile(S->ExportSettingsJson(), *Path);
+		UE_LOG(LogSeaCam, Display, TEXT("SeaWriteJson %s -> %s"), *Path, bOk ? TEXT("ok") : TEXT("FAILED"));
+	}
+}
+
+void ASeaCameraPawn::SeaReadJson(const FString& Path)
+{
+	FString Json;
+	if (!FFileHelper::LoadFileToString(Json, *Path)) { UE_LOG(LogSeaCam, Warning, TEXT("SeaReadJson: cannot read %s"), *Path); return; }
+	if (ASeaOfProbabilitiesActor* S = Sea()) UE_LOG(LogSeaCam, Display, TEXT("SeaReadJson %s -> %d"), *Path, S->ImportSettingsJson(Json, true) ? 1 : 0);
+}
+
+void ASeaCameraPawn::SeaPushEvery(int32 N)
+{
+	if (ASeaOfProbabilitiesActor* S = Sea()) { S->PushEveryNFrames = FMath::Max(1, N); UE_LOG(LogSeaCam, Display, TEXT("SeaPushEvery %d"), S->PushEveryNFrames); }
+}
+
 void ASeaCameraPawn::SeaStats()
 {
 	ASeaOfProbabilitiesActor* S = Sea();
 	const float Fps = 1.f / FMath::Max(GetWorld()->GetDeltaSeconds(), 1e-4f);
-	UE_LOG(LogSeaCam, Display, TEXT("SeaStats dice=%d cols=%d rows=%d frozen=%d fps=%.1f cam=%s"),
-		S ? S->DieCount : -1, S ? S->Cols : 0, S ? S->Rows : 0, S ? (int32)S->bFrozen : -1, Fps, *CameraJson());
+	const double FrameMs = GetWorld()->GetDeltaSeconds() * 1000.0;
+	const double GpuMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
+	UE_LOG(LogSeaCam, Display, TEXT("SeaStats dice=%d cols=%d rows=%d frozen=%d fps=%.1f fps_avg=%.1f frame=%.1fms gpu=%.1fms sim=%.1f height=%.1f push=%.1f pushed=%d cam=%s"),
+		S ? S->DieCount : -1, S ? S->Cols : 0, S ? S->Rows : 0, S ? (int32)S->bFrozen : -1, Fps, FpsAvg, FrameMs, GpuMs,
+		S ? S->MsSim : 0.0, S ? S->MsHeight : 0.0, S ? S->MsPush : 0.0, S ? S->LastPushed : -1, *CameraJson());
 }

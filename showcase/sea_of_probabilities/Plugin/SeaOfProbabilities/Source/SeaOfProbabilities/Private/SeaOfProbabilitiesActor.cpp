@@ -3,11 +3,18 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Kismet/KismetMaterialLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "Async/ParallelFor.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2D.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "RHI.h"
 
 // three units <-> UE (spec section 2): UE = (-z, x, y) * 100
 static FORCEINLINE FVector ThreeToUE(double X, double Y, double Z) { return FVector(-Z * 100.0, X * 100.0, Y * 100.0); }
@@ -52,6 +59,8 @@ void ASeaOfProbabilitiesActor::BeginPlay()
 {
 	Super::BeginPlay();
 	EnsureState();
+	DefaultsJson = ExportSettingsJson();     // authored values = "reset defaults"
+	if (!LoadSettings()) ApplyLookToWorld(); // LoadSettings applies when a save exists
 	LastInput = NowSeconds();
 	NextIdle = LastInput + IdleAfter;
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -84,14 +93,13 @@ void ASeaOfProbabilitiesActor::RebuildField()
 	Theta.SetNumUninitialized(N); Omega.SetNumZeroed(N); YOffset.SetNumZeroed(N); YVel.SetNumZeroed(N);
 	Glow.SetNumZeroed(N); Hue.SetNumUninitialized(N); X3.SetNumUninitialized(N); Z3.SetNumUninitialized(N);
 	Activated.SetNumZeroed(N);
+	StateCpu.SetNumZeroed(N);
 	Splashes.Reset();
 
 	Dice->ClearInstances();
 	Dice->NumCustomDataFloats = CD_COUNT;
 	if (DieMesh) Dice->SetStaticMesh(DieMesh);
-	if (BodyMaterial) Dice->SetMaterial(0, BodyMaterial);
-	if (PipsMaterial) Dice->SetMaterial(1, PipsMaterial);
-	if (AceMaterial) Dice->SetMaterial(2, AceMaterial);
+	EnsureWaveResources();   // RT sized to the grid + MIDs bound to it (falls back to the raw materials)
 
 	TArray<FTransform> Xf; Xf.Reserve(N);
 	for (int32 I = 0; I < N; ++I)
@@ -105,8 +113,72 @@ void ASeaOfProbabilitiesActor::RebuildField()
 	}
 	Dice->AddInstances(Xf, false);
 	DieCount = N;
-	PushInstanceData();
 	PushParametersToCollection();
+	PushAll();
+}
+
+void ASeaOfProbabilitiesActor::EnsureWaveResources()
+{
+	UMaterialInterface* Src[3] = { BodyMaterial, PipsMaterial, AceMaterial };
+	if (!WaveMaterial)
+	{
+		for (int32 S = 0; S < 3; ++S) if (Src[S]) Dice->SetMaterial(S, Src[S]);
+		return;
+	}
+	if (!WaveRT || WaveRT->SizeX != Cols || WaveRT->SizeY != Rows)
+	{
+		// M_Wave stores 1 + h/1024 (the UI-domain pixel shader clamps emissive at 0 and most
+		// heights are negative); clear to the encoding of h = 0 so the frame before the first
+		// draw does not sink the field.
+		WaveRT = UKismetRenderingLibrary::CreateRenderTarget2D(this, Cols, Rows, RTF_R32f, FLinearColor(1.f, 0.f, 0.f, 0.f), false, false);
+		if (WaveRT)
+		{
+			WaveRT->Filter = TF_Nearest;             // one texel per die, sampled at its centre
+			WaveRT->AddressX = WaveRT->AddressY = TA_Clamp;
+			WaveRT->UpdateResourceImmediate(false);
+		}
+		DieMIDs.Reset();
+	}
+	if (!StateTex || StateTex->GetSizeX() != Cols || StateTex->GetSizeY() != Rows)
+	{
+		StateTex = UTexture2D::CreateTransient(Cols, Rows, PF_A32B32G32R32F);
+		if (StateTex)
+		{
+			StateTex->Filter = TF_Nearest;
+			StateTex->AddressX = StateTex->AddressY = TA_Clamp;
+			StateTex->SRGB = false;
+			StateTex->NeverStream = true;
+			StateTex->UpdateResource();
+		}
+		DieMIDs.Reset();
+	}
+	if (DieMIDs.Num() != 3)
+	{
+		DieMIDs.SetNum(3);
+		for (int32 S = 0; S < 3; ++S)
+		{
+			DieMIDs[S] = Src[S] ? UMaterialInstanceDynamic::Create(Src[S], this) : nullptr;
+			if (DieMIDs[S] && WaveRT) DieMIDs[S]->SetTextureParameterValue(TEXT("WaveRT"), WaveRT);
+			if (DieMIDs[S] && StateTex) DieMIDs[S]->SetTextureParameterValue(TEXT("StateRT"), StateTex);
+		}
+	}
+	for (int32 S = 0; S < 3; ++S) if (DieMIDs[S]) Dice->SetMaterial(S, DieMIDs[S]);
+}
+
+void ASeaOfProbabilitiesActor::PushAll()
+{
+	if (!Dice || Dice->GetInstanceCount() != DieCount) return;
+	// static per-instance data, written once: the die's grid position (the dynamic
+	// state travels through StateTex). [0..3] are kept for tools that read them.
+	float Row[CD_COUNT];
+	for (int32 I = 0; I < DieCount; ++I)
+	{
+		Row[CD_THETA] = Theta[I]; Row[CD_YOFF] = 0.f; Row[CD_GLOW] = 0.f;
+		Row[CD_HUE] = Hue[I]; Row[CD_X3] = X3[I]; Row[CD_Z3] = Z3[I];
+		Dice->SetCustomData(I, MakeArrayView(Row, CD_COUNT), false);
+	}
+	Dice->MarkRenderInstancesDirty();
+	PushInstanceData();
 }
 
 void ASeaOfProbabilitiesActor::Scramble()
@@ -124,6 +196,8 @@ void ASeaOfProbabilitiesActor::PushParametersToCollection()
 	S(TEXT("T"), (float)WaveT);
 	S(TEXT("WaveAmp"), WaveAmp); S(TEXT("WaveScale"), WaveScale); S(TEXT("HorizonR"), HorizonR);
 	S(TEXT("ZFront"), (float)(D / 2)); S(TEXT("GlowStrength"), GlowStrength); S(TEXT("Vignette"), Vignette);
+	S(TEXT("Cols"), (float)Cols); S(TEXT("Rows"), (float)Rows); S(TEXT("Spacing"), Spacing);
+	S(TEXT("W"), (float)W); S(TEXT("D"), (float)D);
 	S(TEXT("FogNear"), FogNear); S(TEXT("FogFar"), FogFar); S(TEXT("RedAce"), bRedAce ? 1.f : 0.f);
 	V(TEXT("GlowColorA"), GlowColorA); V(TEXT("GlowColorB"), GlowColorB);
 	V(TEXT("DiceColor"), DiceColor); V(TEXT("BgColor"), BgColor);
@@ -215,14 +289,23 @@ void ASeaOfProbabilitiesActor::AdvanceSplashes(double Now)
 	{
 		FSeaSplash& S = Splashes[Si];
 		const double R = (Now - S.T0) * RingSpeed;
-		for (int32 I = 0; I < DieCount; ++I)
+		// only the grid rectangle the ring can touch this frame (radius <= splashRadius),
+		// not all N dice - identical result, O(ring) instead of O(N) per splash
+		const double Rm = FMath::Min(R, (double)SplashRadius);
+		const int32 X0 = FMath::Max(0, FMath::FloorToInt((S.X - Rm + W / 2) / Spacing)), X1 = FMath::Min(Cols - 1, FMath::CeilToInt((S.X + Rm + W / 2) / Spacing));
+		const int32 Z0 = FMath::Max(0, FMath::FloorToInt((S.Z - Rm + D / 2) / Spacing)), Z1 = FMath::Min(Rows - 1, FMath::CeilToInt((S.Z + Rm + D / 2) / Spacing));
+		for (int32 Iz = Z0; Iz <= Z1; ++Iz)
 		{
-			const double Dd = FMath::Sqrt(FMath::Square(X3[I] - S.X) + FMath::Square(Z3[I] - S.Z));
-			if (Dd <= S.LastR || Dd > R || Dd > SplashRadius) continue;
-			const float Fall = (float)(1.0 - Dd / SplashRadius);
-			YVel[I] += SplashHeight * Fall * S.K;
-			Omega[I] += SplashSpin * Fall * S.K;
-			if (Fall >= ActivateAt) Activated[I] = 1;
+			for (int32 Ix = X0; Ix <= X1; ++Ix)
+			{
+				const int32 I = Iz * Cols + Ix;
+				const double Dd = FMath::Sqrt(FMath::Square(X3[I] - S.X) + FMath::Square(Z3[I] - S.Z));
+				if (Dd <= S.LastR || Dd > R || Dd > SplashRadius) continue;
+				const float Fall = (float)(1.0 - Dd / SplashRadius);
+				YVel[I] += SplashHeight * Fall * S.K;
+				Omega[I] += SplashSpin * Fall * S.K;
+				if (Fall >= ActivateAt) Activated[I] = 1;
+			}
 		}
 		S.LastR = R;
 		if (R > SplashRadius) Splashes.RemoveAt(Si);
@@ -291,33 +374,45 @@ void ASeaOfProbabilitiesActor::IdleLife(double Now)
 
 void ASeaOfProbabilitiesActor::Integrate(float Dt)
 {
-	for (int32 I = 0; I < DieCount; ++I)
+	// independent per die -> parallel (1M dice: ~27 ms serial). A die that has come to
+	// rest is snapped exactly to rest so it stops changing - and stops being pushed.
+	ParallelFor(DieCount, [&](int32 I)
 	{
 		float Rest;
 		if (Activated[I]) { const float T0 = 0.f; Rest = T0 + FMath::RoundToFloat((Theta[I] - T0) / TWO_PI) * TWO_PI; }
 		else Rest = FMath::RoundToFloat(Theta[I] / HALF_PI) * HALF_PI;
 		Omega[I] += (-SpringK * (Theta[I] - Rest) - SpringC * Omega[I]) * Dt;
 		Theta[I] += Omega[I] * Dt;
+		if (FMath::Abs(Omega[I]) < 1e-3f && FMath::Abs(Theta[I] - Rest) < 1e-4f) { Theta[I] = Rest; Omega[I] = 0.f; }
 		YVel[I] += (-14.f * YOffset[I] - 2.4f * YVel[I]) * Dt;
 		YOffset[I] += YVel[I] * Dt;
+		if (FMath::Abs(YOffset[I]) < 1e-4f && FMath::Abs(YVel[I]) < 1e-3f) { YOffset[I] = 0.f; YVel[I] = 0.f; }
 		const float GTarget = FMath::Min(1.f, FMath::Abs(Omega[I]) * GlowSense);
 		Glow[I] += (GTarget - Glow[I]) * FMath::Min(1.f, Dt * (GTarget > Glow[I] ? 10.f : GlowFade));
-	}
+		if (Glow[I] < 2e-3f && GTarget < 2e-3f) Glow[I] = 0.f;
+		StateCpu[I] = FLinearColor(Theta[I], YOffset[I], Glow[I], Hue[I]);
+	});
 }
 
 void ASeaOfProbabilitiesActor::PushInstanceData()
 {
-	if (!Dice || Dice->GetInstanceCount() != DieCount) return;
-	for (int32 I = 0; I < DieCount; ++I)
-	{
-		Dice->SetCustomDataValue(I, CD_THETA, Theta[I], false);
-		Dice->SetCustomDataValue(I, CD_YOFF, YOffset[I], false);
-		Dice->SetCustomDataValue(I, CD_GLOW, Glow[I], false);
-		Dice->SetCustomDataValue(I, CD_HUE, Hue[I], false);
-		Dice->SetCustomDataValue(I, CD_X3, X3[I], false);
-		Dice->SetCustomDataValue(I, CD_Z3, Z3[I], false);
-	}
-	Dice->MarkRenderStateDirty();
+	// Upload the whole state texture (theta, yOffset, glow, hue per die). 4 MB at 512x512:
+	// a memcpy and a texture update, instead of touching the ISM instance buffer at all.
+	if (!StateTex || StateCpu.Num() != DieCount || StateTex->GetSizeX() * StateTex->GetSizeY() != DieCount) return;
+	const double T0 = FPlatformTime::Seconds();
+	if (StateCpu.Num() == 0) { LastPushed = 0; return; }
+	// keep hue for dice Integrate hasn't visited yet (first frame after a rebuild)
+	if (StateCpu[0].A == 0.f && Hue.Num() == DieCount)
+		for (int32 I = 0; I < DieCount; ++I) StateCpu[I] = FLinearColor(Theta[I], YOffset[I], Glow[I], Hue[I]);
+	const int32 W2 = StateTex->GetSizeX(), H2 = StateTex->GetSizeY();
+	const SIZE_T Bytes = (SIZE_T)DieCount * sizeof(FLinearColor);
+	uint8* Copy = (uint8*)FMemory::Malloc(Bytes);
+	FMemory::Memcpy(Copy, StateCpu.GetData(), Bytes);
+	FUpdateTextureRegion2D* Region = new FUpdateTextureRegion2D(0, 0, 0, 0, W2, H2);
+	StateTex->UpdateTextureRegions(0, 1, Region, W2 * sizeof(FLinearColor), sizeof(FLinearColor), Copy,
+		[](uint8* Data, const FUpdateTextureRegion2D* R) { FMemory::Free(Data); delete R; });
+	LastPushed = DieCount;
+	MsPush = (FPlatformTime::Seconds() - T0) * 1000.0;
 }
 
 // ------------------------------------------------------------------ camera
@@ -373,8 +468,17 @@ void ASeaOfProbabilitiesActor::Tick(float DeltaSeconds)
 		HandleInput(Now);
 		IdleLife(Now);
 	}
+	const double TSim = FPlatformTime::Seconds();
 	AdvanceSplashes(Now);
 	Integrate(Dt);
-	PushInstanceData();
+	MsSim = (FPlatformTime::Seconds() - TSim) * 1000.0;
+	if (PushEveryNFrames <= 1 || (GFrameCounter % FMath::Max(1, PushEveryNFrames)) == 0) PushInstanceData();
+	// wave: MPC time first, then redraw the per-die height texture (GPU, 1 texel per die)
 	if (Collection) UKismetMaterialLibrary::SetScalarParameterValue(this, Collection, TEXT("T"), (float)WaveT);
+	if (WaveRT && WaveMaterial)
+	{
+		const double TW = FPlatformTime::Seconds();
+		UKismetRenderingLibrary::DrawMaterialToRenderTarget(this, WaveRT, WaveMaterial);
+		MsHeight = (FPlatformTime::Seconds() - TW) * 1000.0;
+	}
 }

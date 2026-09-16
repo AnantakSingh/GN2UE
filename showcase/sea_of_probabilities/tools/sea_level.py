@@ -48,7 +48,8 @@ def build(mesh_path):
               collection=EAL.load_asset(ROOT + "/MPC_Sea"),
               body_material=EAL.load_asset(ROOT + "/M_DieBody"),
               pips_material=EAL.load_asset(ROOT + "/M_DiePips"),
-              ace_material=EAL.load_asset(ROOT + "/M_DieAce"))
+              ace_material=EAL.load_asset(ROOT + "/M_DieAce"),
+              wave_material=EAL.load_asset(ROOT + "/M_Wave"))
     sea.rebuild_field()
     count = sea.get_editor_property("die_count")
 

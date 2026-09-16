@@ -12,6 +12,8 @@ public class SeaOfProbabilities : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"InputCore",
+			"Json",
+			"RHI",
 		});
 	}
 }

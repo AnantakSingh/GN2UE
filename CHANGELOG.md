@@ -9,6 +9,28 @@ Node count is the running total of supported Blender nodes (see
 [deliverables/SUPPORTED_NODES.md](deliverables/SUPPORTED_NODES.md) and
 [ROADMAP.md](ROADMAP.md)).
 
+## [Unreleased] — Sea of Probabilities showcase (branch `showcase/sea-of-probabilities`)
+
+Native UE 5.8 port of the three.js "Sea of Probabilities" dice ocean (scope cut by the
+author: no phrase reveal, entrance rain or sound). Plan and per-session log:
+`Showcase ideas/SEA_OF_PROBABILITIES_BUILD.md`.
+
+### Added
+- `showcase/sea_of_probabilities/`: Blender die builder, bit-exact 2D simplex port
+  (Python == JS == C++), headless asset builder (`build_sea_assets.py` steps 1/3/5),
+  plugin `SeaOfProbabilities` (`ASeaOfProbabilitiesActor` sim, `ASeaCameraPawn` orbit
+  camera + `ASeaGameMode`, `SeaSettings.cpp` web-key JSON / SaveGame round-trip, `Sea*`
+  console commands), level `L_SeaOfProbabilities`, bounded MCP client `tools/ue_mcp.py`.
+### Changed
+- Rendering path: the ISM is never dirtied after the build; wave height comes from a
+  per-die R32F render target (`M_Wave`, stored as `1 + h/1024` because UI-domain emissive
+  clamps at 0) and per-die state from an RGBA32F transient texture. 60 fps at 116×100,
+  512² and 1024² dice (PIE, foreground editor).
+### Fixed
+- Pip materials fell back to the default material (`TextureSampleParameter2D` sampler-type
+  check against the default texture); the state is now read through a Custom node.
+- Field rendered flat: negative heights were clamped to 0 by the UI material (see above).
+
 ## [Unreleased] — Portability (complete — see PORTABILITY.md)
 
 ### Added

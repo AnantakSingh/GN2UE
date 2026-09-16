@@ -45,6 +45,15 @@ public:
 	UFUNCTION(Exec) void SeaCam();
 	UFUNCTION(Exec) void SeaSetCam(float Px, float Py, float Pz, float Tx, float Ty, float Tz);
 	UFUNCTION(Exec) void SeaStats();
+	UFUNCTION(Exec) void SeaPushEvery(int32 N);     // profiling: instance-data push cadence
+	// settings (spec 3 / 8): JSON round-trip with the web build, SaveGame, reset
+	UFUNCTION(Exec) void SeaJson();                                   // log current settings JSON
+	UFUNCTION(Exec) void SeaSet(const FString& Key, const FString& Value);   // one param by web key
+	UFUNCTION(Exec) void SeaSave();
+	UFUNCTION(Exec) void SeaLoad();
+	UFUNCTION(Exec) void SeaReset();
+	UFUNCTION(Exec) void SeaWriteJson(const FString& Path);           // "copy settings" to a file
+	UFUNCTION(Exec) void SeaReadJson(const FString& Path);            // paste settings from a file
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void BeginPlay() override;
@@ -57,6 +66,8 @@ private:
 	double YawDelta = 0.0, ElevDelta = 0.0, DollyScale = 1.0;
 	FVector PanDelta = FVector::ZeroVector;
 	FVector2D LastMouse = FVector2D(-1, -1);
+	bool bDragging = false, bWasButtonDown = false;
+	float FpsAvg = 0.f;
 
 	ASeaOfProbabilitiesActor* Sea() const;
 	void ApplyPose();

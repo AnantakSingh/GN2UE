@@ -6,6 +6,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/SaveGame.h"
 #include "SeaOfProbabilitiesActor.generated.h"
 
 class UInstancedStaticMeshComponent;
@@ -20,6 +21,15 @@ struct FSeaSplash
 	GENERATED_BODY()
 	double X = 0, Z = 0, T0 = 0, LastR = 0;
 	float K = 1.f;
+};
+
+/** Persisted settings: the web version's localStorage key, verbatim. */
+UCLASS()
+class SEAOFPROBABILITIES_API USeaSaveGame : public USaveGame
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY() FString Json;
 };
 
 UCLASS()
@@ -79,6 +89,40 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Idle") float IdleCursorSpeed = 0.12f;
 	UPROPERTY(EditAnywhere, Category = "Idle") float IdleCursorStrength = 0.7f;
 
+	// ---- lighting / post (spec 3, 6.3) - applied to the level's Sun / Sky / PostFX by ApplyLookToWorld()
+	UPROPERTY(EditAnywhere, Category = "Lighting") float SunIntensity = 4.f;
+	UPROPERTY(EditAnywhere, Category = "Lighting") FLinearColor SunColor = FLinearColor::White;
+	UPROPERTY(EditAnywhere, Category = "Lighting") float SunAzimuth = 197.f;
+	UPROPERTY(EditAnywhere, Category = "Lighting") float SunElevation = 34.f;
+	UPROPERTY(EditAnywhere, Category = "Lighting") float HemiIntensity = 2.f;
+	UPROPERTY(EditAnywhere, Category = "Lighting") float EnvIntensity = 2.f;
+	UPROPERTY(EditAnywhere, Category = "Lighting") float Exposure = 0.52f;     // three toneMappingExposure
+	UPROPERTY(EditAnywhere, Category = "Lighting") bool bShadows = true;
+	UPROPERTY(EditAnywhere, Category = "Post FX") bool bPostFx = true;
+	UPROPERTY(EditAnywhere, Category = "Post FX") bool bBloom = true;
+	UPROPERTY(EditAnywhere, Category = "Post FX") float BloomStrength = 0.6f;
+	UPROPERTY(EditAnywhere, Category = "Post FX") float BloomThreshold = 1.f;
+	UPROPERTY(EditAnywhere, Category = "Post FX") float BloomRadius = 0.4f;
+	// material constants (exported for round-trip; baked into the materials for now)
+	UPROPERTY(EditAnywhere, Category = "Dice Material") float Roughness = 0.71f;
+	UPROPERTY(EditAnywhere, Category = "Dice Material") float Metalness = 1.f;
+	UPROPERTY(EditAnywhere, Category = "Dice Material") float Clearcoat = 0.09f;
+	UPROPERTY(EditAnywhere, Category = "Dice Material") float ClearcoatRough = 0.29f;
+	UPROPERTY(EditAnywhere, Category = "Dice Material") float Bevel = 0.18f;
+
+	/** Exposure bias that reproduced three's 0.52 on the reference setup (see sea_level.py). */
+	UPROPERTY(EditAnywhere, Category = "Lighting", AdvancedDisplay) float ExposureBiasAt052 = 10.2f;
+
+	// ---- settings round-trip (spec 3): exact web key names; unknown keys are preserved
+	UFUNCTION(BlueprintCallable, Category = "Sea") FString ExportSettingsJson() const;
+	UFUNCTION(BlueprintCallable, Category = "Sea") bool ImportSettingsJson(const FString& Json, bool bApply = true);
+	UFUNCTION(BlueprintCallable, Category = "Sea") bool SaveSettings();       // SaveGame slot "dice-ocean-params-v2"
+	UFUNCTION(BlueprintCallable, Category = "Sea") bool LoadSettings();
+	UFUNCTION(BlueprintCallable, Category = "Sea") void ResetDefaults();
+	UFUNCTION(BlueprintCallable, Category = "Sea") void ApplyLookToWorld();
+	/** Set one parameter by its web key ("waveAmp", "glowColorA", "cols", ...). */
+	UFUNCTION(BlueprintCallable, Category = "Sea") bool SetParam(const FString& Key, const FString& Value);
+
 	// ---- camera: normally provided by ASeaCameraPawn (ASeaGameMode); this fallback
 	// spawns a fixed camera only when the level runs under some other game mode
 	UPROPERTY(EditAnywhere, Category = "Camera") bool bSpawnStartCamera = false;
@@ -90,8 +134,17 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Assets") TObjectPtr<UMaterialInterface> BodyMaterial;
 	UPROPERTY(EditAnywhere, Category = "Assets") TObjectPtr<UMaterialInterface> PipsMaterial;
 	UPROPERTY(EditAnywhere, Category = "Assets") TObjectPtr<UMaterialInterface> AceMaterial;
+	/** UI-domain material that writes wave+horizon height per die into WaveRT (M_Wave). */
+	UPROPERTY(EditAnywhere, Category = "Assets") TObjectPtr<UMaterialInterface> WaveMaterial;
 
 	UPROPERTY(VisibleAnywhere, Category = "Assets") TObjectPtr<UInstancedStaticMeshComponent> Dice;
+	/** Cols x Rows R32F: height per die, redrawn every frame on the GPU; dice sample it in WPO. */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Assets") TObjectPtr<class UTextureRenderTarget2D> WaveRT;
+	/** Cols x Rows RGBA32F: (theta, yOffset, glow, hue) per die, uploaded from the CPU every
+	 *  frame. Keeping dynamic state out of the ISM instance buffer is what makes 512x512 cheap:
+	 *  any dirty instance makes UE re-upload the WHOLE instance buffer (~58 ms at 262k). */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Assets") TObjectPtr<class UTexture2D> StateTex;
+	UPROPERTY(Transient) TArray<TObjectPtr<class UMaterialInstanceDynamic>> DieMIDs;
 
 	// ---- runtime state exposed for the HUD / readouts. Transient: the per-die
 	// arrays below are not UPROPERTYs, so a serialized DieCount with empty arrays
@@ -99,6 +152,14 @@ public:
 	// must never be trusted - see EnsureState().
 	UPROPERTY(VisibleAnywhere, Transient, Category = "State") bool bFrozen = false;
 	UPROPERTY(VisibleAnywhere, Transient, Category = "State") int32 DieCount = 0;
+	/** Debug: push instance data only every N frames (1 = every frame). Isolates the
+	 *  engine's per-instance update cost from everything else when profiling. */
+	UPROPERTY(EditAnywhere, Transient, Category = "State") int32 PushEveryNFrames = 1;
+	// per-frame cost breakdown (ms), read by SeaStats
+	UPROPERTY(VisibleAnywhere, Transient, Category = "State") double MsSim = 0;     // splashes + integration
+	UPROPERTY(VisibleAnywhere, Transient, Category = "State") double MsHeight = 0;  // wave RT draw (game-thread side)
+	UPROPERTY(VisibleAnywhere, Transient, Category = "State") double MsPush = 0;    // instance-data push
+	UPROPERTY(VisibleAnywhere, Transient, Category = "State") int32 LastPushed = 0; // state texels uploaded last frame
 
 	UFUNCTION(BlueprintCallable, Category = "Sea") void RebuildField();
 	UFUNCTION(BlueprintCallable, Category = "Sea") void Scramble();
@@ -121,7 +182,10 @@ public:
 private:
 	// per-die state (spec 4.1), index = iz * Cols + ix
 	TArray<float> Theta, Omega, YOffset, YVel, Glow, Hue, X3, Z3;
+	TArray<FLinearColor> StateCpu;                     // staging for StateTex (theta, yOff, glow, hue)
 	TArray<uint8> Activated;
+	void PushAll();                                    // rebuild: static instance data once
+	void EnsureWaveResources();                        // RT + state texture + MIDs for the current grid
 	TArray<FSeaSplash> Splashes;
 	double W = 0, D = 0;         // field extents in three units
 	double WaveT = 0;            // wave time
@@ -136,6 +200,8 @@ private:
 	static float Hash01(uint32 I, uint32 Salt);
 	/** True when the per-die arrays match the ISM; rebuilds when they don't. */
 	bool EnsureState();
+	FString DefaultsJson;                       // snapshot at BeginPlay, for ResetDefaults
+	TSharedPtr<class FJsonObject> Passthrough;  // keys we don't own (sound, intro...) from the last import
 	int32 CellAt(double X3, double Z3) const;      // nearest cell or -1 (0.55*spacing rule)
 	bool PickField(FVector2D& OutXZ) const;         // mouse ray vs analytic height field
 	void HandleInput(double Now);

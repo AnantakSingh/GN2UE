@@ -107,3 +107,53 @@ the editor in the foreground — background throttle reads exactly 3 fps), step 
 report.
 
 **To resume:** open the editor on `/Game/SeaOfProbabilities/L_SeaOfProbabilities`, PIE, hover/click/Space. Rebuild after C++ edits with `python showcase/sea_of_probabilities/tools/sync_sea_plugin.py --build` (editor closed); re-run asset steps with `SEA_STEP=n` via `tools/build_sea_assets.py`.
+
+**2026-09-16 — session 4 (MCP): steps 8–9 done, two rendering bugs found and fixed.**
+
+- **Perf architecture (step 9 root cause):** any dirty ISM instance makes UE re-upload the
+  *whole* instance buffer (~58 ms at 262k dice), whatever the marking API. Fixed by never
+  dirtying the ISM after the build: custom data holds only the die's grid position; the
+  wave height is drawn once per frame per die into **`WaveRT`** (Cols×Rows R32F, UI-domain
+  `M_Wave`, `DrawMaterialToRenderTarget`) and the dynamic state (theta, yOffset, glow, hue)
+  is uploaded per frame into **`StateTex`** (RGBA32F transient texture, `UpdateTextureRegions`,
+  ~1.2 ms at 262k). The die WPO samples both at the die's texel. Sim: ring-bounded splash
+  iteration + `ParallelFor` integrate.
+- **Pips rendered with the default material** (`M_DiePips`/`M_DieAce`: *"Sampler type is
+  Linear Color, should be Color for /Engine/EngineResources/Black"*): the pixel-shader
+  `TextureSampleParameter2D` validates its sampler type against the default texture. Replaced
+  by a Custom node reading the `StateRT` TextureObjectParameter (same path the WPO uses).
+- **Field rendered flat:** the UI-domain pixel shader clamps emissive at 0
+  (`GetMaterialEmissive`), and with the horizon term most heights are negative → `WaveRT`
+  was 0 everywhere at 512² and only the wave crests survived at 116×100. `M_Wave` now stores
+  `1 + h/1024` (R32F keeps ~1e-4 units of precision), the WPO decodes it, the unbound default
+  is white (h = 0) and the RT clears to the h = 0 encoding.
+- **Step 8** done as data, not UI: `SeaSettings.cpp` round-trips the web's JSON keys
+  (`ExportSettingsJson` / `ImportSettingsJson`, unknown keys passed through), `SeaSave` /
+  `SeaLoad` (SaveGame slot `dice-ocean-params-v2`), `SeaReset`, `SeaWriteJson` / `SeaReadJson`
+  path, `SeaSet key value`, `SeaJson`; `ApplyLookToWorld` drives sun / sky / exposure / bloom /
+  vignette from the same keys. No UMG panel (console + JSON files instead).
+- **Step 9 measured** (foreground editor, 1280×720 PIE, RTX class GPU), after the fixes:
+
+  | grid | dice | fps | frame | gpu | sim | upload |
+  |---|---|---|---|---|---|---|
+  | 116×100 (web default) | 11,600 | 60 | 16.7 ms | ~3 ms | 0.1 ms | 0.0 ms |
+  | 512×512 | 262,144 | 60 | 16.7 ms | 3.8 ms | 0.5 ms | 1.4 ms |
+  | 1024×1024 (previous build) | 1,048,576 | 60 | 16.7 ms | 6.5 ms | ~2.5 ms | 5.5 ms |
+
+  Shadows/LODs no longer matter at these numbers (`generate_lods` returned −1 both via MCP
+  and Python; left alone).
+- **Verified in PIE** (captures `sea_fix1/2.png`): waves undulate, pips are dark with the
+  blue↔pink neon glow, idle life and `SeaSplash` rings look like the reference.
+- **Editor crash (engine, not plugin):** `EXCEPTION_ACCESS_VIOLATION` in
+  `D3D12RHI`/`SlateRHIRenderer` right after a `HighResShot` was issued while the editor's
+  main window was **minimized** (the MCP capture tools had already started returning
+  "Failed to capture any editor windows"). Rule: check `IsIconic` before any capture; never
+  screenshot a minimized editor.
+- **Camera pose drifted** once during the session (orbit + dolly, target unchanged) while
+  the machine was in use; two `SeaCam` readings 12 s apart with nobody touching it were
+  identical — real input, not self-motion.
+- **In-editor material rebuild works:** `exec` of `build_sea_assets.py` with
+  `SEA_STEP=3` from the status-bar Python console (PIE stopped) recompiles the six materials
+  in ~3 s — no editor restart needed for material changes. Transient *"missing input"*
+  compile warnings while the graph is being rebuilt are expected; only failures logged
+  *after* `SEA STEP 3: PASS` count.
